@@ -122,7 +122,7 @@ export function useTransitionSystem(opts?: { onBeforeChange?: () => void }) {
       }
 
       // Preload the target scene background so it's in browser cache when we switch.
-      const targetBg = SCENES[targetSceneId]?.scene?.background;
+      const targetBg = SCENES[targetSceneId]?.background;
       if (targetBg) preloadSceneBackground(targetBg);
 
       getGameRuntime()?.emit({
