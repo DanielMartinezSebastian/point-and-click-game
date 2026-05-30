@@ -6,12 +6,27 @@ import { DoubleSide, Mesh, TextureLoader, Vector3 } from "three";
 
 import { useSceneStore } from "@pointclick-engine/engine-core";
 
-export function SceneBackgroundPlane({ url }: { url: string | null | undefined }) {
+/** Precarga el fondo de una escena en el caché del navegador. */
+export function preloadSceneBackground(url: string): void {
+  if (typeof window === "undefined" || !url) return;
+  const img = new window.Image();
+  img.src = url;
+}
+
+export function SceneBackgroundPlane({
+  url,
+  onReady,
+}: {
+  url: string | null | undefined;
+  onReady?: () => void;
+}) {
   const [texture, setTexture] = useState<import("three").Texture | null>(null);
   const meshRef = useRef<Mesh | null>(null);
   const groundCenterXRef = useRef<number>(0);
   const ground = useSceneStore((s) => s.scene.ground);
   const sceneId = useSceneStore((s) => s.sceneId);
+  const onReadyRef = useRef(onReady);
+  useEffect(() => { onReadyRef.current = onReady; });
 
   useEffect(() => {
     if (!url) return;
@@ -30,6 +45,7 @@ export function SceneBackgroundPlane({ url }: { url: string | null | undefined }
 
         loadedTexture = tex;
         setTexture(tex);
+        onReadyRef.current?.();
       },
       undefined,
       (err) => {

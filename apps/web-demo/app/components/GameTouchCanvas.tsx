@@ -130,7 +130,34 @@ export default function GameTouchCanvas({
   // base runtime handler so `onDrop`+`consume` events open matching doors.
   const currentScene = SCENES[sceneId];
   const sceneDoors = currentScene?.doors ?? [];
-  const { handleTransitionTriggered, wrapRuntimeEventForTransitions } = useTransitionSystem();
+
+  // ── Fade curtain for scene transitions ────────────────────────────────────
+  // The overlay div is always in the DOM. We manipulate it directly (bypassing
+  // React state) so the curtain drops synchronously before any re-render with
+  // the new (backgroundless) scene data.
+  const fadeOverlayRef = useRef<HTMLDivElement>(null);
+
+  const handleBeforeSceneChange = useCallback(() => {
+    const el = fadeOverlayRef.current;
+    if (!el) return;
+    el.style.transition = "none";
+    el.style.opacity = "1";
+    el.style.pointerEvents = "all";
+  }, []);
+
+  const handleBackgroundReady = useCallback(() => {
+    const el = fadeOverlayRef.current;
+    if (!el || el.style.opacity !== "1") return;
+    // Force layout flush so the transition triggers on the next style change.
+    el.getBoundingClientRect();
+    el.style.transition = "opacity 0.45s ease";
+    el.style.opacity = "0";
+    el.style.pointerEvents = "none";
+  }, []);
+
+  const { handleTransitionTriggered, wrapRuntimeEventForTransitions } = useTransitionSystem({
+    onBeforeChange: handleBeforeSceneChange,
+  });
 
   const afterDoorRuntimeEvent = useDoorSystem({
     scene: currentScene,
@@ -365,7 +392,7 @@ export default function GameTouchCanvas({
         {/* <fog attach="fog" args={["#070d1f", 20, 55]} /> */}
         <ambientLight intensity={1.1} color="#8bc2ff" />
         <directionalLight position={[3, 9, 6]} intensity={1.5} color="#d8ecff" />
-        <SceneBackgroundPlane url={sceneBackground} />
+        <SceneBackgroundPlane url={sceneBackground} onReady={handleBackgroundReady} />
         {cameraMode === "fixed" && <CameraController />}
         <FreeCameraController />
         <Physics gravity={[0, -20, 0]}>
@@ -480,6 +507,20 @@ export default function GameTouchCanvas({
         moveTransitionToPlayer={moveTransitionToPlayer}
         addTransition={createTransition}
         removeTransition={deleteTransition}
+      />
+
+      {/* Cortina de transición: siempre en DOM, opacidad 0 en reposo.
+          Se activa/desactiva via ref para evitar el batching de React. */}
+      <div
+        ref={fadeOverlayRef}
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 500,
+          background: "#070d1f",
+          opacity: 0,
+          pointerEvents: "none",
+        }}
       />
     </div>
   );

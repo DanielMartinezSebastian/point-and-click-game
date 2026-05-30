@@ -8,6 +8,7 @@ import { getGameRuntime } from "../publicApi";
 import { useDialogStore } from "../../../store/dialogStore";
 import { usePlacedItemsStore } from "../../../store/placedItemsStore";
 import { getRandomPhrase } from "../../../../demo-content/dialogs/getRandomPhrase";
+import { preloadSceneBackground } from "../../../components/scene/SceneBackgroundPlane";
 import type { RuntimeEvent } from "@pointclick-engine/engine-core";
 
 /**
@@ -20,13 +21,15 @@ import type { RuntimeEvent } from "@pointclick-engine/engine-core";
  * Scene changes are applied directly via sceneStore for demo compatibility
  * (scenes are defined in SCENES, not registered via createGameRuntime).
  */
-export function useTransitionSystem() {
+export function useTransitionSystem(opts?: { onBeforeChange?: () => void }) {
   const storeSetScene = useSceneStore((s) => s.setScene);
   const placedItems = usePlacedItemsStore((s) => s.items);
   const isTransitioningRef = useRef(false);
   const showDialog = useDialogStore((s) => s.show);
   const dialogVisible = useDialogStore((s) => s.visible);
   const pendingTransitionRef = useRef<{ id: string; targetSceneId: string } | null>(null);
+  const optsRef = useRef(opts);
+  useEffect(() => { optsRef.current = opts; });
 
   const changeScene = useCallback(
     (targetSceneId: string, transitionId: string) => {
@@ -43,6 +46,10 @@ export function useTransitionSystem() {
         type: "transition:started",
         transitionId,
       });
+
+      // Notify caller synchronously so it can show the curtain overlay before
+      // any state update causes a re-render with the new (backgroundless) scene.
+      optsRef.current?.onBeforeChange?.();
 
       const fromSceneId = useSceneStore.getState().sceneId;
       const fromScene = useSceneStore.getState().scene;
@@ -113,6 +120,10 @@ export function useTransitionSystem() {
           return;
         }
       }
+
+      // Preload the target scene background so it's in browser cache when we switch.
+      const targetBg = SCENES[targetSceneId]?.scene?.background;
+      if (targetBg) preloadSceneBackground(targetBg);
 
       getGameRuntime()?.emit({
         type: "transition:triggered",
