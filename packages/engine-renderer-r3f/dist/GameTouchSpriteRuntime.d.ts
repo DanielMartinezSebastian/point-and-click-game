@@ -1,6 +1,6 @@
 import { type GameCharacterName } from "./sprite/clips";
 import { type RuntimeEventHandler, type GameSceneWall, type WallToolMode } from "@pointclick-engine/engine-core";
-export declare function GameTouchSpriteRuntime({ activeCharacter, debug, showDebugGround, showDebugWalls, showPlayerCollider, wallOpacityMode, wallInteractionsEnabled, wallToolMode, wallPointResetSignal, speechText, speechVisible, speechTrigger, speechCharsPerSecond, onBoundaryHit, onSpeechDismiss, onRuntimeEvent, onClickWorld, getMobileInput, addWallWithData, getPhrase, selectedWallIndex, onSelectWall, updateSelectedWall, disableClickToMove, getEffectiveClickGoal, }: {
+export declare function GameTouchSpriteRuntime({ activeCharacter, debug, showDebugGround, showDebugWalls, showPlayerCollider, wallOpacityMode, wallInteractionsEnabled, wallToolMode, wallPointResetSignal, speechText, speechVisible, speechTrigger, speechCharsPerSecond, onSpeechLetterSound, onBoundaryHit, onSpeechDismiss, onRuntimeEvent, getMobileInput, addWallWithData, getPhrase, selectedWallIndex, onSelectWall, updateSelectedWall, disableClickToMove, getEffectiveClickGoal, }: {
     activeCharacter: GameCharacterName;
     debug: boolean;
     showDebugGround: boolean;
@@ -21,10 +21,10 @@ export declare function GameTouchSpriteRuntime({ activeCharacter, debug, showDeb
     speechVisible: boolean;
     speechTrigger: number;
     speechCharsPerSecond: number;
+    onSpeechLetterSound?: () => void;
     onBoundaryHit: (phrase: string) => void;
     onSpeechDismiss: () => void;
     onRuntimeEvent?: RuntimeEventHandler;
-    onClickWorld?: (x: number, z: number) => void;
     /**
      * DI: Returns current joystick/mobile input state.
      * Default: no-op (always inactive). Inject `useMobileInputStore.getState` for demo.
@@ -78,5 +78,5 @@ export declare function GameTouchSpriteRuntime({ activeCharacter, debug, showDeb
         x: number;
         z: number;
     } | null | undefined;
-}): import("react/jsx-runtime").JSX.Element;
+}): any;
 //# sourceMappingURL=GameTouchSpriteRuntime.d.ts.map

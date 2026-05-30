@@ -50,7 +50,7 @@ function wrapParagraphByWords(paragraph, maxCharsPerLine) {
     lines.push(currentLine);
     return lines;
 }
-export default function SpeechBubble({ text, visible, trigger, charsPerSecond = 30, onDismiss, }) {
+export default function SpeechBubble({ text, visible, trigger, charsPerSecond = 30, onDismiss, onLetterRevealed, }) {
     const playerPosition = useSceneStore((state) => state.playerPosition);
     const ground = useSceneStore((state) => state.scene.ground);
     const normalizedText = useMemo(() => text.trim(), [text]);
@@ -80,10 +80,20 @@ export default function SpeechBubble({ text, visible, trigger, charsPerSecond = 
         if (!visible || wrappedText.length === 0)
             return;
         let index = 0;
+        let charsSinceLastSound = 0;
         const msPerChar = Math.max(14, Math.floor(1000 / Math.max(1, charsPerSecond)));
+        const charsPerSound = Math.max(1, Math.round(charsPerSecond / 8));
         const timer = globalThis.setInterval(() => {
             index += 1;
+            const newChar = wrappedText[index - 1];
             setDisplayedText(wrappedText.slice(0, index));
+            if (onLetterRevealed && newChar && newChar !== " " && newChar !== "\n") {
+                charsSinceLastSound += 1;
+                if (charsSinceLastSound >= charsPerSound) {
+                    charsSinceLastSound = 0;
+                    onLetterRevealed();
+                }
+            }
             if (index >= wrappedText.length) {
                 globalThis.clearInterval(timer);
                 if (onDismiss) {
@@ -100,7 +110,7 @@ export default function SpeechBubble({ text, visible, trigger, charsPerSecond = 
                 dismissTimerRef.current = null;
             }
         };
-    }, [charsPerSecond, wrappedText, normalizedText, onDismiss, trigger, visible]);
+    }, [charsPerSecond, wrappedText, normalizedText, onDismiss, onLetterRevealed, trigger, visible]);
     const shouldShowLeft = useMemo(() => {
         const worldEdgePadding = 0.9;
         const spaceLeft = playerPosition[0] - ground.minX - worldEdgePadding;

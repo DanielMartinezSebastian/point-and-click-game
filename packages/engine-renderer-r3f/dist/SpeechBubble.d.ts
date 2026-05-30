@@ -4,7 +4,8 @@ type SpeechBubbleProps = {
     trigger: number;
     charsPerSecond?: number;
     onDismiss?: () => void;
+    onLetterRevealed?: () => void;
 };
-export default function SpeechBubble({ text, visible, trigger, charsPerSecond, onDismiss, }: SpeechBubbleProps): import("react/jsx-runtime").JSX.Element | null;
+export default function SpeechBubble({ text, visible, trigger, charsPerSecond, onDismiss, onLetterRevealed, }: SpeechBubbleProps): any;
 export {};
 //# sourceMappingURL=SpeechBubble.d.ts.map
