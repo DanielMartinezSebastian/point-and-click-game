@@ -191,7 +191,7 @@ function getWallAxes(rotationY) {
 function projectDistance(originX, originZ, pointX, pointZ, axis) {
     return (pointX - originX) * axis.x + (pointZ - originZ) * axis.y;
 }
-export function GameTouchSpriteRuntime({ activeCharacter, debug, showDebugGround, showDebugWalls, showPlayerCollider = false, wallOpacityMode = "wireframe", wallInteractionsEnabled = true, wallToolMode, wallPointResetSignal, speechText, speechVisible, speechTrigger, speechCharsPerSecond, onBoundaryHit, onSpeechDismiss, onRuntimeEvent, onClickWorld, 
+export function GameTouchSpriteRuntime({ activeCharacter, debug, showDebugGround, showDebugWalls, showPlayerCollider = false, wallOpacityMode = "wireframe", wallInteractionsEnabled = true, wallToolMode, wallPointResetSignal, speechText, speechVisible, speechTrigger, speechCharsPerSecond, onSpeechLetterSound, onBoundaryHit, onSpeechDismiss, onRuntimeEvent, 
 // DI props for demo-specific dependencies
 getMobileInput = () => ({ active: false, x: 0, z: 0 }), addWallWithData, getPhrase = () => "", selectedWallIndex = null, onSelectWall, updateSelectedWall, disableClickToMove = false, getEffectiveClickGoal, }) {
     const spriteRef = useRef(null);
@@ -310,12 +310,10 @@ getMobileInput = () => ({ active: false, x: 0, z: 0 }), addWallWithData, getPhra
         });
         if (route && route.length > 0) {
             setRoute(route);
-            onClickWorld?.(x, z);
             return;
         }
         setTarget(effectiveGoal.x, effectiveGoal.z);
-        onClickWorld?.(x, z);
-    }, [addWallWithData, clampToPlayableArea, debug, disableClickToMove, getEffectiveClickGoal, ground.y, onClickWorld, playableBounds, playerSpawn, setRoute, setTarget, wallPointResetSignal, wallToolMode]);
+    }, [addWallWithData, clampToPlayableArea, debug, disableClickToMove, getEffectiveClickGoal, ground.y, playableBounds, playerSpawn, setRoute, setTarget, wallPointResetSignal, wallToolMode]);
     const stopWallInteraction = useCallback(() => {
         wallInteractionRef.current = null;
     }, []);
@@ -653,10 +651,6 @@ getMobileInput = () => ({ active: false, x: 0, z: 0 }), addWallWithData, getPhra
                         handleHoverWorld(x, z);
                         handleHoverPointWallTool(x, z);
                     }
-                    : undefined, debug: debug && showDebugGround, depthNearZ: DEPTH_NEAR_Z, depthFarZ: DEPTH_FAR_Z }), _jsx(SceneWalls, { debug: debug && showDebugWalls, opacityMode: wallOpacityMode, interactionsEnabled: wallInteractionsEnabled, onStartWallMove: handleStartWallMove, onStartWallResize: handleStartWallResize, selectedWallIndex: selectedWallIndex, onSelectWall: onSelectWall }), debug && wallToolMode === "points" && (_jsx(SceneWallPointPreview, { preview: wallPointPreview, groundY: ground.y })), _jsx(SceneCollisionSphere, {}), _jsxs(RigidBody, { ref: characterBodyRef, type: "dynamic", colliders: false, position: renderPosition, gravityScale: 1.2, linearDamping: 7, angularDamping: 20, ccd: true, enabledRotations: [false, false, false], children: [_jsx(CuboidCollider, { ref: characterColliderRef, args: [0.55, 0.95, 0.18], friction: 2.2, restitution: 0 }), debug && showPlayerCollider && (
-                    // box base height = 2; the useFrame above scales Y to `spriteScale`
-                    // and offsets Y position so the wireframe exactly mirrors the
-                    // physics collider (whose halfY is also set to `spriteScale`).
-                    _jsxs("mesh", { ref: colliderWireframeRef, raycast: () => null, children: [_jsx("boxGeometry", { args: [1.1, 2, 0.36] }), _jsx("meshBasicMaterial", { color: "#00ffff", wireframe: true, transparent: true, opacity: 0.85 })] })), _jsx(DavidSprite, { ref: spriteRef, meshRef: meshRef, animation: activeAnimation, preloadAnimations: characterAnimations, scale: [SPRITE_MIN_SCALE, SPRITE_MIN_SCALE, 1], isPaused: false }), _jsx(SpeechBubble, { text: speechText, visible: speechVisible, trigger: speechTrigger, charsPerSecond: speechCharsPerSecond, onDismiss: onSpeechDismiss }, speechTrigger)] })] }));
+                    : undefined, debug: debug && showDebugGround, depthNearZ: DEPTH_NEAR_Z, depthFarZ: DEPTH_FAR_Z }), _jsx(SceneWalls, { debug: debug && showDebugWalls, opacityMode: wallOpacityMode, interactionsEnabled: wallInteractionsEnabled, onStartWallMove: handleStartWallMove, onStartWallResize: handleStartWallResize, selectedWallIndex: selectedWallIndex, onSelectWall: onSelectWall }), debug && wallToolMode === "points" && (_jsx(SceneWallPointPreview, { preview: wallPointPreview, groundY: ground.y })), _jsx(SceneCollisionSphere, {}), _jsxs(RigidBody, { ref: characterBodyRef, type: "dynamic", colliders: false, position: renderPosition, gravityScale: 1.2, linearDamping: 7, angularDamping: 20, ccd: true, enabledRotations: [false, false, false], children: [_jsx(CuboidCollider, { ref: characterColliderRef, args: [0.55, 0.95, 0.18], friction: 2.2, restitution: 0 }), debug && showPlayerCollider && (_jsxs("mesh", { ref: colliderWireframeRef, raycast: () => null, children: [_jsx("boxGeometry", { args: [1.1, 2, 0.36] }), _jsx("meshBasicMaterial", { color: "#00ffff", wireframe: true, transparent: true, opacity: 0.85 })] })), _jsx(DavidSprite, { ref: spriteRef, meshRef: meshRef, animation: activeAnimation, preloadAnimations: characterAnimations, scale: [SPRITE_MIN_SCALE, SPRITE_MIN_SCALE, 1], isPaused: false }), _jsx(SpeechBubble, { text: speechText, visible: speechVisible, trigger: speechTrigger, charsPerSecond: speechCharsPerSecond, onDismiss: onSpeechDismiss, onLetterRevealed: onSpeechLetterSound }, speechTrigger)] })] }));
 }
 //# sourceMappingURL=GameTouchSpriteRuntime.js.map

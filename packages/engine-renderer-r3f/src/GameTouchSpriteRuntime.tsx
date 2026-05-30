@@ -288,6 +288,7 @@ export function GameTouchSpriteRuntime({
   speechVisible,
   speechTrigger,
   speechCharsPerSecond,
+  onSpeechLetterSound,
   onBoundaryHit,
   onSpeechDismiss,
   onRuntimeEvent,
@@ -321,6 +322,7 @@ export function GameTouchSpriteRuntime({
   speechVisible: boolean;
   speechTrigger: number;
   speechCharsPerSecond: number;
+  onSpeechLetterSound?: () => void;
   onBoundaryHit: (phrase: string) => void;
   onSpeechDismiss: () => void;
   onRuntimeEvent?: RuntimeEventHandler;
@@ -987,6 +989,7 @@ export function GameTouchSpriteRuntime({
           trigger={speechTrigger}
           charsPerSecond={speechCharsPerSecond}
           onDismiss={onSpeechDismiss}
+          onLetterRevealed={onSpeechLetterSound}
         />
       </RigidBody>
     </>

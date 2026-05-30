@@ -124,7 +124,13 @@ export function useInventoryRuntimeController({
   );
   const [placedItems, setPlacedItems] = useState<PlacedSceneItem[]>([]);
   const pickupLockRef = useRef<Set<string>>(new Set());
+  const inventorySlotsRef = useRef(inventorySlots);
   const setPlacedItemsInStore = usePlacedItemsStore((s) => s.setItems);
+
+  // Keep ref in sync with current state (avoids stale closure in callbacks)
+  useEffect(() => {
+    inventorySlotsRef.current = inventorySlots;
+  });
 
   // Persist inventory slots to localStorage whenever they change
   useEffect(() => {
@@ -373,7 +379,7 @@ export function useInventoryRuntimeController({
 
       // Try to add to inventory first, but don't apply state changes yet
       const inventoryResult = addOneToInventory(
-        inventorySlots,
+        inventorySlotsRef.current,
         decision.stack,
       );
 

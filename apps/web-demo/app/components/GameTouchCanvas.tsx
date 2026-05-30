@@ -267,6 +267,12 @@ export default function GameTouchCanvas({
   const speechVisible = useDialogStore((s) => s.visible);
   const speechTrigger = useDialogStore((s) => s.triggerCount);
 
+  const handleSpeechLetterSound = useCallback(() => {
+    const n = Math.floor(Math.random() * 4) + 1;
+    const url = `/assets/audio/sfx/speak (${n}).mp3`;
+    webAudioAdapter.playSound({ id: url, url, category: "sfx" }, { volume: 0.35 });
+  }, []);
+
   // Get transitions from scene
   const sceneTransitions = useSceneStore((s) => s.scene.transitions ?? EMPTY_TRANSITIONS);
 
@@ -380,6 +386,7 @@ export default function GameTouchCanvas({
               speechVisible={speechVisible}
               speechTrigger={speechTrigger}
               speechCharsPerSecond={speechCharsPerSecond}
+              onSpeechLetterSound={handleSpeechLetterSound}
               onBoundaryHit={handleBoundaryHit}
               onSpeechDismiss={hideSpeechBubble}
               onRuntimeEvent={handleRuntimeEvent}
@@ -411,7 +418,7 @@ export default function GameTouchCanvas({
             )}
             onPickup={handlePickupPlacedItem}
             onInteract={handleItemInteract}
-            canPickup={!isInventoryOpen && !disableClickToMove}
+            canPickup={!isInventoryOpen && !disableClickToMove && !speechVisible}
           />
           <SceneDoors doors={sceneDoors} />
           <SceneTransitions
