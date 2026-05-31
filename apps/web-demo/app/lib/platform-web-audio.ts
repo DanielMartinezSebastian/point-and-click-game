@@ -207,6 +207,18 @@ export class WebAudioAdapter implements AudioPort {
         this.musicEl.volume = this.effectiveVolume("music");
       }
     }
+
+    // Update all currently-playing sfx/ui/ambient sounds
+    if (target === "master" || target === "sfx") {
+      const vol = this.effectiveVolume("sfx");
+      for (const pool of this.sfxPool.values()) {
+        for (const el of pool) {
+          if (!el.paused && !el.ended) {
+            el.volume = vol;
+          }
+        }
+      }
+    }
   }
 
   setVolume(target: AudioMuteTarget, volume: number): void {
@@ -225,6 +237,18 @@ export class WebAudioAdapter implements AudioPort {
     // Update music volume
     if ((target === "master" || target === "music") && this.musicEl) {
       this.musicEl.volume = this.effectiveVolume("music");
+    }
+
+    // Update all currently-playing sfx/ui/ambient sounds
+    if (target === "master" || target === "sfx") {
+      const vol = this.effectiveVolume("sfx");
+      for (const pool of this.sfxPool.values()) {
+        for (const el of pool) {
+          if (!el.paused && !el.ended) {
+            el.volume = vol;
+          }
+        }
+      }
     }
   }
 
