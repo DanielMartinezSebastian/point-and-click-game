@@ -291,7 +291,7 @@ function ExternalLinkIcon() {
 // ── Styles ──────────────────────────────────────────────────────────────────
 
 function containerStyle(awaitingStart: boolean): CSSProperties {
-  return {
+  const baseStyle: CSSProperties = {
     position: "fixed",
     inset: 0,
     zIndex: 100,
@@ -309,10 +309,18 @@ function containerStyle(awaitingStart: boolean): CSSProperties {
     paddingBottom: "clamp(12px, 2vh, 28px)",
     fontFamily: "var(--font-pixel), 'Courier New', monospace",
     imageRendering: "pixelated",
-    cursor: awaitingStart ? "pointer" : undefined,
     userSelect: "none",
     overflow: "hidden",
   };
+
+  // Only add cursor pointer when waiting for start click. Once started,
+  // omit cursor so children (links, buttons) show their own cursor without
+  // interference from the parent.
+  if (awaitingStart) {
+    baseStyle.cursor = "pointer";
+  }
+
+  return baseStyle;
 }
 
 // Header — title row + npm link + author credit. Stacks vertically.
