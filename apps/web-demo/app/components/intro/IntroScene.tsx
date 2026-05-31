@@ -48,11 +48,14 @@ type IntroSceneProps = {
 /**
  * IntroScene — overlay DOM-only mostrado antes de inicializar el juego.
  *
- * Muestra a David en plano americano (recortado por overflow del contenedor),
- * recita un texto introductorio con efecto typewriter + sonido por letra, y
- * tras terminar revela un botón "Continuar con la demo". Mientras el intro
- * está activo el runtime del juego NO se monta — así no hay música, ni
- * inventario, ni escena cargada hasta que el usuario continúa.
+ * Layout — fixed full-screen, el sprite es el ÚNICO hijo en flujo y todo
+ * lo demás (bocadillo, botón, hint) se posiciona en absolute para que el
+ * sprite no se desplace en ningún momento durante el typewriter o cuando
+ * aparece/desaparece el botón continuar.
+ *
+ * Mientras el intro está activo el runtime del juego NO se monta — así no
+ * hay música, ni inventario, ni escena cargada hasta que el usuario
+ * continúa.
  *
  * Gate inicial: el typewriter no arranca hasta que el usuario hace click.
  * Esto desbloquea el AudioContext (autoplay policy) antes de que se intenten
@@ -164,9 +167,9 @@ export function IntroScene({ onComplete }: IntroSceneProps) {
       style={containerStyle(!started)}
       aria-label="Introducción"
     >
-      {/* Sprite — plano americano via overflow del contenedor.
-          La imagen es más alta que su wrapper, así solo asoma la parte
-          superior (cabeza + torso). */}
+      {/* Sprite — único hijo en flujo. El bocadillo se ancla en absolute a
+          su contenedor (position:relative) y el sprite NO se mueve cuando
+          el bocadillo aparece o crece. */}
       <div style={spriteWrapStyle}>
         <img
           src={currentSprite}
@@ -174,38 +177,53 @@ export function IntroScene({ onComplete }: IntroSceneProps) {
           draggable={false}
           style={spriteImgStyle}
         />
+
+        {/* Bocadillo — sólo visible tras el primer click. Anclado al sprite
+            (top:58%) para que quede sobre la parte inferior del torso. Su
+            ancho es mayor que el sprite y se centra horizontalmente; al
+            crecer verticalmente lo hace hacia abajo, sin desplazar nada.
+            El wrapper hace la posición + fade-in (su animation termina en
+            translateY(0) y machacaría el translateX(-50%) si lo mezcláramos
+            en el mismo elemento que el bubble). */}
+        {started && (
+          <div style={bubbleWrapStyle}>
+            <div style={bubbleStyle}>
+              <p style={bubbleTextStyle}>
+                {displayedText}
+                {!typingDone && <span style={caretStyle}>▍</span>}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Bubble — diálogo con efecto typewriter. */}
-      <div style={bubbleStyle}>
-        <p style={bubbleTextStyle}>
-          {displayedText}
-          {started && !typingDone && <span style={caretStyle}>▍</span>}
-        </p>
-      </div>
-
-      {/* Start hint — sólo antes de que el usuario haga el primer click. */}
+      {/* Start hint — sólo antes del primer click. */}
       {!started && (
         <p style={startHintStyle}>
           PULSA EN CUALQUIER LUGAR PARA EMPEZAR
         </p>
       )}
 
-      {/* Continue — aparece cuando el typing termina (+ pequeña pausa). */}
+      {/* Continuar — aparece cuando el typing termina (+ pequeña pausa).
+          El wrapper se posiciona en absolute para que el botón no empuje al
+          sprite cuando se monta. El botón interior gestiona libremente su
+          propia transform para el hover. */}
       {continueVisible && (
-        <button
-          type="button"
-          onClick={handleContinue}
-          style={continueButtonStyle}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
-          }}
-        >
-          CONTINUAR CON LA DEMO
-        </button>
+        <div style={continueWrapStyle}>
+          <button
+            type="button"
+            onClick={handleContinue}
+            style={continueButtonStyle}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
+            }}
+          >
+            CONTINUAR CON LA DEMO
+          </button>
+        </div>
       )}
 
       {/* Scanlines — sutil, para ligar visualmente con el resto de la demo. */}
@@ -223,11 +241,8 @@ function containerStyle(awaitingStart: boolean): CSSProperties {
     zIndex: 100,
     background: "#070d1f",
     display: "flex",
-    flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    gap: "clamp(16px, 3vh, 32px)",
-    padding: "clamp(20px, 4vh, 48px)",
     fontFamily: "var(--font-pixel), 'Courier New', monospace",
     imageRendering: "pixelated",
     cursor: awaitingStart ? "pointer" : "default",
@@ -236,33 +251,45 @@ function containerStyle(awaitingStart: boolean): CSSProperties {
   };
 }
 
+// Sprite aspect ratio is 93x255 ≈ 0.365 → natural height = width · 2.74.
+// We size width via vh so the natural height stays in viewport on common
+// aspect ratios (22vh × 2.74 ≈ 60vh tall).
 const spriteWrapStyle: CSSProperties = {
-  width: "clamp(180px, 28vh, 320px)",
-  // The sprite's aspect ratio is 93x255 ≈ 0.365. With width=W the natural
-  // height would be ~2.74·W. We deliberately constrain height to ~1.6·W so
-  // the bottom half (knees down) is clipped — a rough "plano americano".
-  height: "clamp(290px, 45vh, 520px)",
-  overflow: "hidden",
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "flex-start",
+  position: "relative",
+  width: "clamp(140px, 22vh, 260px)",
   filter: "drop-shadow(0 0 28px rgba(132,230,255,0.18))",
 };
 
 const spriteImgStyle: CSSProperties = {
   width: "100%",
   height: "auto",
+  display: "block",
   imageRendering: "pixelated",
   pointerEvents: "none",
 };
 
+// Wrapper — handles absolute positioning + fade-in. Anchored to spriteWrap.
+// top:58% places the bubble's top edge over the lower torso (sprite is
+// 93x255, lower torso ≈ y=148/255 = 58%).
+const bubbleWrapStyle: CSSProperties = {
+  position: "absolute",
+  top: "58%",
+  left: "50%",
+  transform: "translateX(-50%)",
+  width: "min(560px, 86vw)",
+  zIndex: 2,
+  animation: "intro-fade-in 0.25s ease both",
+};
+
+// Inner — visual chrome only. Sized to 100% of the wrapper so the wrapper's
+// width drives the bubble width.
 const bubbleStyle: CSSProperties = {
-  position: "relative",
-  maxWidth: "min(680px, 88vw)",
+  width: "100%",
   background: "#ffffff",
   color: "#121212",
   borderRadius: "10px",
-  padding: "18px 22px",
+  padding: "16px 20px",
+  boxSizing: "border-box",
   boxShadow: [
     "inset 0 0 0 3px rgba(132,230,255,0.85)",
     "0 6px 0 rgba(0,0,0,0.55)",
@@ -289,12 +316,24 @@ const caretStyle: CSSProperties = {
 const startHintStyle: CSSProperties = {
   position: "absolute",
   bottom: "clamp(20px, 4vh, 40px)",
+  left: "50%",
+  transform: "translateX(-50%)",
   margin: 0,
   fontSize: "0.92rem",
   color: "rgba(132,230,255,0.75)",
   letterSpacing: "0.28em",
   textTransform: "uppercase",
+  whiteSpace: "nowrap",
   animation: "intro-pulse 1.6s ease-in-out infinite",
+};
+
+const continueWrapStyle: CSSProperties = {
+  position: "absolute",
+  bottom: "clamp(28px, 6vh, 64px)",
+  left: "50%",
+  transform: "translateX(-50%)",
+  zIndex: 3,
+  animation: "intro-fade-in 0.45s ease both",
 };
 
 const continueButtonStyle: CSSProperties = {
@@ -315,7 +354,6 @@ const continueButtonStyle: CSSProperties = {
     "0 0 18px rgba(132,230,255,0.25)",
   ].join(","),
   transition: "transform 0.15s ease",
-  animation: "intro-fade-in 0.45s ease both",
 };
 
 const scanlinesStyle: CSSProperties = {
