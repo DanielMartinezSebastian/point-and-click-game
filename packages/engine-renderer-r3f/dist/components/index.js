@@ -1,4 +1,6 @@
 // Visual components barrel for @pointclick-engine/engine-renderer-r3f/components
+// Canvas core
+export { GameCanvasCore } from "./GameCanvasCore";
 // Sprite
 export { default as DavidSprite } from "../sprite/DavidSprite";
 export * from "../sprite/clips";

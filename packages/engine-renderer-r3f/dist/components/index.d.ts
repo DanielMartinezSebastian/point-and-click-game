@@ -1,3 +1,5 @@
+export { GameCanvasCore } from "./GameCanvasCore";
+export type { GameCanvasCoreProps } from "./GameCanvasCore";
 export { default as DavidSprite } from "../sprite/DavidSprite";
 export type { DavidSpriteHandle } from "../sprite/DavidSprite";
 export * from "../sprite/clips";

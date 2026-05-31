@@ -3,6 +3,7 @@ export {
   getSceneState,
   subscribeSceneState,
   setSceneStoreEmitter,
+  setSceneStoreLogger,
 } from "./sceneStore";
 export type { InventorySlotsStore } from "./inventorySlotsStore";
 export { createInventorySlotsStore } from "./inventorySlotsStore";

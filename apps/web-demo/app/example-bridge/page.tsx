@@ -2,11 +2,13 @@
 
 import { useEffect } from "react";
 import {
-  GameViewport,
   createGameRuntime,
   type GameSceneConfig,
 } from "../lib/engine/publicApi";
 import { SCENES } from "../../demo-content/scenes/scenes";
+import GameTouchCanvas from "../components/GameTouchCanvas";
+import { useInventoryStore } from "../store/inventoryStore";
+import { useDialogStore } from "../store/dialogStore";
 import HtmlBridgePanel from "./HtmlBridgePanel";
 
 /**
@@ -19,9 +21,16 @@ import HtmlBridgePanel from "./HtmlBridgePanel";
  */
 export default function ExampleBridgePage() {
   useEffect(() => {
-    // Registrar escenas del demo en el runtime
     const runtime = createGameRuntime({
       scenes: Object.values(SCENES) as GameSceneConfig[],
+      inventoryAdapter: {
+        toggle: () => useInventoryStore.getState().toggle(),
+        isOpen: () => useInventoryStore.getState().isOpen,
+      },
+      dialogAdapter: {
+        show: (text, key) => useDialogStore.getState().show(text, key),
+        hide: () => useDialogStore.getState().dismiss(),
+      },
     });
 
     return () => {
@@ -39,7 +48,7 @@ export default function ExampleBridgePage() {
       }}
     >
       <div style={{ position: "relative" }}>
-        <GameViewport />
+        <GameTouchCanvas />
       </div>
       <HtmlBridgePanel />
     </div>

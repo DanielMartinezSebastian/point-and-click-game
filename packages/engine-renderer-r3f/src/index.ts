@@ -1,5 +1,9 @@
 export const RENDERER_VERSION = "0.1.0";
 
+// Canvas core
+export { GameCanvasCore } from "./components/GameCanvasCore";
+export type { GameCanvasCoreProps } from "./components/GameCanvasCore";
+
 // Adapters
 export { useR3FGameLoop } from "./adapters/gameLoopR3F";
 export { WebKeyboardInput } from "./adapters/keyboardInput";
@@ -28,3 +32,6 @@ export { default as SpeechBubble } from "./SpeechBubble";
 // Hooks
 export { usePlayerWalkAnimation } from "./hooks/usePlayerWalkAnimation";
 export { useAudioSystem } from "./hooks/useAudioSystem";
+export { useClickToMoveController } from "./hooks/useClickToMoveController";
+export { useKeyboardMovementInput } from "./adapters/useKeyboardMovementInput";
+export type { KeyboardMovementState } from "./adapters/useKeyboardMovementInput";

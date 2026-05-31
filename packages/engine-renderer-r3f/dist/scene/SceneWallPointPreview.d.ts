@@ -6,6 +6,6 @@ type WallPointPreview = {
 export declare function SceneWallPointPreview({ preview, groundY, }: {
     preview: WallPointPreview | null;
     groundY: number;
-}): import("react/jsx-runtime").JSX.Element | null;
+}): any;
 export {};
 //# sourceMappingURL=SceneWallPointPreview.d.ts.map

@@ -1,2 +1,2 @@
-export declare function SceneCollisionSphere(): import("react/jsx-runtime").JSX.Element;
+export declare function SceneCollisionSphere(): any;
 //# sourceMappingURL=SceneCollisionSphere.d.ts.map
