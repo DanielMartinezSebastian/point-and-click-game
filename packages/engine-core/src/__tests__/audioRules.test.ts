@@ -5,7 +5,8 @@ import {
   type AudioRulesContext,
   type AudioDefaultsConfig,
 } from "../game/logic/rules/audioRules";
-import type { GameEvent, GameScene, ItemDefinition } from "../game/types";
+import type { GameScene, ItemDefinition } from "../game/types";
+import type { GameEvent } from "../game/events";
 
 const mockScene = (overrides?: Partial<GameScene>): GameScene => ({
   id: "test",
@@ -183,6 +184,7 @@ describe("audioRules", () => {
         items: {},
         transitions: {
           door1: {
+            kind: "collision",
             id: "door1",
             targetSceneId: "next",
             position: [0, 0, 0],
@@ -208,6 +210,7 @@ describe("audioRules", () => {
         items: {},
         transitions: {
           door1: {
+            kind: "collision",
             id: "door1",
             targetSceneId: "next",
             position: [0, 0, 0],
