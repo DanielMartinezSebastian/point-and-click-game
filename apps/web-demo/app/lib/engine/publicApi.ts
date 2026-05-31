@@ -3,6 +3,56 @@
 // Re-exports from renderer (stable public API)
 export { useR3FGameLoop, WebKeyboardInput } from "@pointclick-engine/engine-renderer-r3f";
 
+// ---------------------------------------------------------------------------
+// i18n public surface (Phase 13, v0.4.0+) — additions only, no breaking change
+// ---------------------------------------------------------------------------
+
+export type {
+  Locale,
+  DialogEntry,
+  DialogDictionary,
+  LocaleDictionaries,
+  I18nConfig,
+  I18nState,
+  I18nPort,
+  I18nStore,
+} from "@pointclick-engine/engine-core";
+
+export {
+  // Registry
+  registerDictionary,
+  registerDictionaries,
+  getDictionary,
+  // Translator
+  translate,
+  getRandomPhrase,
+  matchLocale,
+  // Store
+  createI18nStore,
+  getI18nStore,
+  resetI18nStore,
+  subscribeI18n,
+  setI18nStoreEmitter,
+  // Headless port (tests / SSR)
+  HeadlessI18nAdapter,
+  // Executors for the CommandHandler
+  registerI18nExecutors,
+} from "@pointclick-engine/engine-core";
+
+export {
+  useI18n,
+  useLocaleDetection,
+  I18nProvider,
+  LocaleSwitcher,
+} from "@pointclick-engine/engine-renderer-r3f";
+export type {
+  UseI18nResult,
+  UseLocaleDetectionOptions,
+  LocaleSwitcherProps,
+  LocaleSwitcherRenderOption,
+  I18nProviderProps,
+} from "@pointclick-engine/engine-renderer-r3f";
+
 /**
  * Public API mínima del motor de juego.
  *

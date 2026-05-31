@@ -1,32 +1,32 @@
 # Phase 13 — Progress Tracking
 
 **Phase**: 13 — i18n / Localization System
-**Status**: Planned
-**Started**: —
-**Completed**: —
+**Status**: Completed
+**Started**: 2026-05-31
+**Completed**: 2026-05-31
 
 ---
 
 ## Sprint 1 — Core agnóstico
 
-- [ ] [13.1 — Core types: Locale, DialogDictionary, I18nConfig](tasks/01-core-types.md)
-- [ ] [13.2 — Core port: I18nPort + HeadlessI18nAdapter](tasks/02-i18n-port.md)
-- [ ] [13.3 — Core state: i18nStore + persistencia via port](tasks/03-i18n-store.md)
-- [ ] [13.4 — Core: registerDictionary + translate + getRandomPhrase + interpolación](tasks/04-translator-helpers.md)
-- [ ] [13.5 — Core commands + events de i18n](tasks/05-commands-events.md)
-- [ ] [13.6 — Core tests: store + translator + registry + headless](tasks/06-core-tests.md)
+- [x] [13.1 — Core types: Locale, DialogDictionary, I18nConfig](tasks/01-core-types.md)
+- [x] [13.2 — Core port: I18nPort + HeadlessI18nAdapter](tasks/02-i18n-port.md)
+- [x] [13.3 — Core state: i18nStore + persistencia via port](tasks/03-i18n-store.md)
+- [x] [13.4 — Core: registerDictionary + translate + getRandomPhrase + interpolación](tasks/04-translator-helpers.md)
+- [x] [13.5 — Core commands + events de i18n](tasks/05-commands-events.md)
+- [x] [13.6 — Core tests: store + translator + registry + headless](tasks/06-core-tests.md)
 
 ## Sprint 2 — Platform + renderer
 
-- [ ] [13.7 — Platform: webI18nAdapter (localStorage + navigator + SSR-safe)](tasks/07-web-i18n-adapter.md)
-- [ ] [13.8 — R3F: useI18n + useLocaleDetection + integración runtime](tasks/08-r3f-hooks.md)
-- [ ] [13.9 — R3F componente: LocaleSwitcher (headless + estilos default)](tasks/09-locale-switcher.md)
+- [x] [13.7 — Platform: webI18nAdapter (localStorage + navigator + SSR-safe)](tasks/07-web-i18n-adapter.md)
+- [x] [13.8 — R3F: useI18n + useLocaleDetection + integración runtime](tasks/08-r3f-hooks.md)
+- [x] [13.9 — R3F componente: LocaleSwitcher (headless + estilos default)](tasks/09-locale-switcher.md)
 
 ## Sprint 3 — Integraciones, demo y API pública
 
-- [ ] [13.10 — Docs: recetas Next.js (browser, native i18n, next-intl)](tasks/10-nextjs-recipes.md)
-- [ ] [13.11 — Demo: migrar dialogs + montar switcher en inventory](tasks/11-demo-migration.md)
-- [ ] [13.12 — Public API: exports, contrato v1, CHANGELOG](tasks/12-public-api-docs.md)
+- [x] [13.10 — Docs: recetas Next.js (browser, native i18n, next-intl)](tasks/10-nextjs-recipes.md)
+- [x] [13.11 — Demo: migrar dialogs + montar switcher en inventory](tasks/11-demo-migration.md)
+- [x] [13.12 — Public API: exports, contrato v1, CHANGELOG](tasks/12-public-api-docs.md)
 
 ---
 

@@ -24,4 +24,9 @@ export { usePlayerWalkAnimation } from "./hooks/usePlayerWalkAnimation";
 export { useAudioSystem } from "./hooks/useAudioSystem";
 export { useClickToMoveController } from "./hooks/useClickToMoveController";
 export { useKeyboardMovementInput } from "./adapters/useKeyboardMovementInput";
+// i18n
+export { useI18n } from "./hooks/useI18n";
+export { useLocaleDetection, } from "./hooks/useLocaleDetection";
+export { I18nProvider } from "./components/I18nProvider";
+export { LocaleSwitcher, } from "./components/LocaleSwitcher";
 //# sourceMappingURL=index.js.map

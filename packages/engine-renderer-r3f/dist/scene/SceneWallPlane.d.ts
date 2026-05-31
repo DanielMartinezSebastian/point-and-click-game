@@ -14,5 +14,5 @@ export declare function SceneWallPlane({ wall, renderOrder, }: {
     wall: GameSceneWall;
     /** Controls draw order when multiple wall planes overlap. Lower = drawn first. */
     renderOrder?: number;
-}): any;
+}): import("react/jsx-runtime").JSX.Element | null;
 //# sourceMappingURL=SceneWallPlane.d.ts.map

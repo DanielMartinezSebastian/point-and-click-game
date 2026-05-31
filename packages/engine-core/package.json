@@ -1,6 +1,6 @@
 {
   "name": "@pointclick-engine/engine-core",
-  "version": "0.1.1",
+  "version": "0.4.0",
   "description": "Framework-agnostic core for Point & Click Game Engine",
   "type": "module",
   "main": "dist/index.js",

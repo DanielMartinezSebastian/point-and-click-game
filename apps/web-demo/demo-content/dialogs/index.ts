@@ -1,6 +1,15 @@
+import {
+  registerDictionaries,
+  type LocaleDictionaries,
+} from "@pointclick-engine/engine-core";
+
 import type { DialogLocales } from "./types";
 
-export const dialogs: DialogLocales = {
+/**
+ * Full demo content keyed by locale → dialog dictionary. Same shape as the
+ * engine's `LocaleDictionaries`.
+ */
+export const demoDictionaries: LocaleDictionaries = {
   es: {
     boundaryHit: {
       phrases: [
@@ -404,3 +413,20 @@ export const dialogs: DialogLocales = {
     },
   },
 };
+
+/**
+ * Idempotent: register the demo's dictionaries with the engine's i18n
+ * registry. Call once at boot — repeated calls no-op.
+ */
+let _registered = false;
+export function registerDemoDictionaries(): void {
+  if (_registered) return;
+  registerDictionaries(demoDictionaries);
+  _registered = true;
+}
+
+/**
+ * Legacy alias for code that imported `dialogs` directly.
+ * Prefer {@link demoDictionaries} / {@link registerDemoDictionaries}.
+ */
+export const dialogs: DialogLocales = demoDictionaries;

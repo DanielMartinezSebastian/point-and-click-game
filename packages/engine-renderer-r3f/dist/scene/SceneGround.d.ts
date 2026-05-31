@@ -4,5 +4,5 @@ export declare function SceneGround({ onClickWorld, onHoverWorld, debug, depthNe
     debug: boolean;
     depthNearZ: number;
     depthFarZ: number;
-}): any;
+}): import("react/jsx-runtime").JSX.Element;
 //# sourceMappingURL=SceneGround.d.ts.map

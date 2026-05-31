@@ -42,7 +42,6 @@ import {
   selectSceneEditingBlocked,
   useEditorModeStore,
 } from "../store/editorModeStore";
-import { getRandomPhrase } from "../../demo-content/dialogs/getRandomPhrase";
 
 // Carga el joystick solo en cliente (ssr: false); la detección de dispositivo
 // táctil se realiza dentro del propio componente con window garantizado.
@@ -420,7 +419,6 @@ export default function GameTouchCanvas({
               onRuntimeEvent={handleRuntimeEvent}
               getMobileInput={useMobileInputStore.getState}
               addWallWithData={addWallWithData}
-              getPhrase={getRandomPhrase}
               selectedWallIndex={selectedWallIndex}
               onSelectWall={onSelectWall}
               updateSelectedWall={updateSelectedWall}

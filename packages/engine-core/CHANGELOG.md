@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-05-31
+
+### Added — i18n / Localization System (Phase 13)
+
+- Core types: `Locale` (BCP-47 string), `DialogEntry`, `DialogDictionary`,
+  `LocaleDictionaries`, `I18nConfig`, `I18nState`, `DEFAULT_I18N_CONFIG`.
+- New port `I18nPort` (`detectLocale` / `persistLocale` / `clearLocale?`)
+  with `HeadlessI18nAdapter` for tests and SSR.
+- `i18nStore` with `createI18nStore`, `getI18nStore`, `resetI18nStore`,
+  `subscribeI18n`, `setI18nStoreEmitter`, and `bindPort(port)` for one-line
+  detect + persist wiring.
+- Dictionary registry: `registerDictionary`, `registerDictionaries`,
+  `getDictionary`, `clearRegistry`, `getRegisteredLocales`. Incremental
+  merge with collision warning.
+- Translator: `translate(key, { vars, locale })`, `getRandomPhrase(key,
+  { vars, locale, random })` with active → fallback → key fallback chain
+  and `{{var}}` interpolation. `matchLocale(candidate, available)` BCP-47
+  negotiation.
+- Commands: `i18n:setLocale`, `i18n:registerDictionary`.
+- Events: `i18n:localeChanged`, `i18n:dictionaryUpdated`.
+- `registerI18nExecutors(handler, emit?)` wires both commands against a
+  `CommandHandler`.
+- 48 new tests (store / registry / translator / headless adapter / executors).
+
+### Changed
+
+- `Locale` is now `string` (BCP-47) instead of a fixed union. The demo
+  keeps a narrowed `DemoLocale = "es" | "en"` alias for authoring.
+
+### Backward compatibility
+
+- Pure additions — no breaking changes. Existing consumers continue to work.
+
 ## [0.1.0] — 2026-05-27
 
 ### Added

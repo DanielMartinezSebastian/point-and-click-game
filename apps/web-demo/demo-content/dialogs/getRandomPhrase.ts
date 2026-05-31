@@ -1,16 +1,16 @@
-import { dialogs } from "./index";
+import { getRandomPhrase as engineGetRandomPhrase } from "@pointclick-engine/engine-core";
+
+import { registerDemoDictionaries } from "./index";
 import type { DialogKey, Locale } from "./types";
 
 /**
- * Devuelve una frase aleatoria del diálogo indicado para el locale actual.
- * Si el locale no existe, cae a "es" como fallback.
+ * Backward-compatible wrapper around the engine's i18n translator.
+ *
+ * Old callsites passed `locale` explicitly and the function fell back to
+ * "es". With i18n in place, the locale lives in the engine store; pass an
+ * override only when you need to bypass the active locale (e.g. SSR).
  */
-export function getRandomPhrase(key: DialogKey, locale: Locale = "es"): string {
-  const dict = dialogs[locale] ?? dialogs.es;
-  const entry = dict[key] ?? dialogs.es[key];
-  if (!entry || entry.phrases.length === 0) {
-    return key;
-  }
-  const { phrases } = entry;
-  return phrases[Math.floor(Math.random() * phrases.length)]!;
+export function getRandomPhrase(key: DialogKey, locale?: Locale): string {
+  registerDemoDictionaries();
+  return engineGetRandomPhrase(key, locale ? { locale } : undefined);
 }

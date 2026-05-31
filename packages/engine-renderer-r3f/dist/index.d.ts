@@ -23,4 +23,8 @@ export { useAudioSystem } from "./hooks/useAudioSystem";
 export { useClickToMoveController } from "./hooks/useClickToMoveController";
 export { useKeyboardMovementInput } from "./adapters/useKeyboardMovementInput";
 export type { KeyboardMovementState } from "./adapters/useKeyboardMovementInput";
+export { useI18n, type UseI18nResult } from "./hooks/useI18n";
+export { useLocaleDetection, type UseLocaleDetectionOptions, } from "./hooks/useLocaleDetection";
+export { I18nProvider, type I18nProviderProps } from "./components/I18nProvider";
+export { LocaleSwitcher, type LocaleSwitcherProps, type LocaleSwitcherRenderOption, } from "./components/LocaleSwitcher";
 //# sourceMappingURL=index.d.ts.map

@@ -7,4 +7,4 @@ export * from "./game/i18n";
 export * from "./events";
 export * from "./ports";
 
-export const VERSION = "0.1.0";
+export const VERSION = "0.4.0";

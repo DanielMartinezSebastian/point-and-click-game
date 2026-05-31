@@ -4,6 +4,8 @@ import gsap from "gsap";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 
+import { LocaleSwitcher } from "@pointclick-engine/engine-renderer-r3f";
+
 import { ConfirmationDialog } from "./ConfirmationDialog";
 import { MuteToggle } from "./MuteToggle";
 import { useAudioSettings, audioSettingsStore } from "../store/audio";
@@ -447,6 +449,23 @@ export function InventoryUI({
             </button>
 
             <AudioMuteControls />
+
+            <div
+              style={{
+                display: "flex",
+                gap: "6px",
+                alignItems: "center",
+                marginTop: "10px",
+                color: "white",
+                fontSize: "12px",
+              }}
+            >
+              <span style={{ opacity: 0.6 }}>Idioma:</span>
+              <LocaleSwitcher
+                labels={{ es: "Español", en: "English" }}
+                ariaLabel="Idioma"
+              />
+            </div>
 
             <div
               style={{

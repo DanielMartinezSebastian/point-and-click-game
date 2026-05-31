@@ -53,6 +53,14 @@ Documentación por componente. **Una página por componente.**
 
 ---
 
+## 🔌 Integraciones
+
+Recetas para enchufar el engine con frameworks externos.
+
+- [`integrations/nextjs-i18n.md`](integrations/nextjs-i18n.md) — 3 patrones de i18n con Next.js (browser auto, native routing, next-intl)
+
+---
+
 ## 📋 Decisions (ADRs ligeros)
 
 Decisiones arquitectónicas registradas.

@@ -6,7 +6,7 @@ export type KeyboardMovementState = {
     anyKeyPressed: boolean;
 };
 export declare function useKeyboardMovementInput(): {
-    clearPressedKeys: any;
-    getKeyboardMovement: any;
+    clearPressedKeys: () => void;
+    getKeyboardMovement: () => KeyboardMovementState;
 };
 //# sourceMappingURL=useKeyboardMovementInput.d.ts.map

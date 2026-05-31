@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   createGameRuntime,
   type GameSceneConfig,
@@ -11,9 +11,30 @@ import GameTouchCanvas from "./components/GameTouchCanvas";
 import { useInventoryStore } from "./store/inventoryStore";
 import { useDialogStore } from "./store/dialogStore";
 import { IntroScene } from "./components/intro/IntroScene";
+import { useLocaleDetection } from "@pointclick-engine/engine-renderer-r3f";
+import { createWebI18nAdapter } from "./lib/platform-web";
+import { registerDemoDictionaries } from "../demo-content/dialogs";
+
+const DEMO_AVAILABLE_LOCALES = ["es", "en"];
 
 function Game() {
+  const i18nPort = useMemo(
+    () => createWebI18nAdapter({ availableLocales: DEMO_AVAILABLE_LOCALES }),
+    [],
+  );
+
+  useLocaleDetection({
+    port: i18nPort,
+    config: {
+      defaultLocale: "es",
+      fallbackLocale: "es",
+      availableLocales: DEMO_AVAILABLE_LOCALES,
+    },
+  });
+
   useEffect(() => {
+    registerDemoDictionaries();
+
     const runtime = createGameRuntime({
       scenes: Object.values(SCENES) as GameSceneConfig[],
       inventoryAdapter: {

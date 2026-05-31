@@ -35,6 +35,51 @@ useGameActions(): GameActions
 GameViewport(props: GameViewportProps): ReactNode
 ```
 
+### i18n (v0.4.0+, Phase 13)
+
+Tipos:
+
+```ts
+Locale, DialogEntry, DialogDictionary, LocaleDictionaries
+I18nConfig, I18nState, I18nPort, I18nStore
+UseI18nResult, UseLocaleDetectionOptions
+LocaleSwitcherProps, LocaleSwitcherRenderOption, I18nProviderProps
+```
+
+Funciones / componentes:
+
+```ts
+// Core
+registerDictionary(locale, dict): void
+registerDictionaries(all): void
+getDictionary(locale): DialogDictionary | undefined
+translate(key, opts?): string
+getRandomPhrase(key, opts?): string
+matchLocale(candidate, available): Locale | null
+createI18nStore(config): I18nStore
+getI18nStore(): I18nStore
+resetI18nStore(config?): void
+subscribeI18n(listener): () => void
+setI18nStoreEmitter(emitter): void
+HeadlessI18nAdapter // class implements I18nPort
+registerI18nExecutors(handler, emit?): () => void
+
+// R3F
+useI18n(): UseI18nResult
+useLocaleDetection({ port, config? }): void
+<I18nProvider config={...}>...</I18nProvider>
+<LocaleSwitcher as|labels|renderOption|className|ariaLabel />
+```
+
+Adapter web (no es parte del package; vive en `apps/web-demo/app/lib/`):
+
+```ts
+createWebI18nAdapter({ availableLocales, storageKey? }): WebI18nAdapter
+bindI18nPersistence(store, port): () => void
+```
+
+Recetas Next.js: ver [`../integrations/nextjs-i18n.md`](../integrations/nextjs-i18n.md).
+
 ## Cambios Permitidos (no breaking)
 
 - ✅ Añadir exports opcionales nuevos

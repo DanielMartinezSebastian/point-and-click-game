@@ -19,5 +19,5 @@ export type GameCanvasCoreProps = {
  * The demo uses GameTouchCanvas (which has all demo content wired in).
  * External consumers build their own canvas that composes GameCanvasCore.
  */
-export declare function GameCanvasCore({ children, className, }: GameCanvasCoreProps): any;
+export declare function GameCanvasCore({ children, className, }: GameCanvasCoreProps): import("react/jsx-runtime").JSX.Element;
 //# sourceMappingURL=GameCanvasCore.d.ts.map

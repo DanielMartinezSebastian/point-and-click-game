@@ -15,5 +15,5 @@ export declare function SceneWalls({ debug, opacityMode, interactionsEnabled, on
     selectedWallIndex?: number | null;
     /** Callback to select a wall in the editor (injected via DI). */
     onSelectWall?: (index: number) => void;
-}): any;
+}): import("react/jsx-runtime").JSX.Element;
 //# sourceMappingURL=SceneWalls.d.ts.map
