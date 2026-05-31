@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   createGameRuntime,
   type GameSceneConfig,
@@ -10,8 +10,9 @@ import { SCENES } from "../demo-content/scenes/scenes";
 import GameTouchCanvas from "./components/GameTouchCanvas";
 import { useInventoryStore } from "./store/inventoryStore";
 import { useDialogStore } from "./store/dialogStore";
+import { IntroScene } from "./components/intro/IntroScene";
 
-export default function Home() {
+function Game() {
   useEffect(() => {
     const runtime = createGameRuntime({
       scenes: Object.values(SCENES) as GameSceneConfig[],
@@ -30,6 +31,15 @@ export default function Home() {
     };
   }, []);
 
+  return <GameTouchCanvas />;
+}
+
+export default function Home() {
+  // El runtime del juego (y por tanto música, inventario y escena por defecto)
+  // no se monta hasta que el intro termina — cumple "solo sonido de diálogo
+  // en el intro" sin tener que silenciar nada manualmente.
+  const [introDone, setIntroDone] = useState(false);
+
   return (
     <CRTEffectWrapper
       preset="atari"
@@ -43,7 +53,7 @@ export default function Home() {
       // enableSweep={true}
       // sweepDuration={12}
     >
-      <GameTouchCanvas />
+      {introDone ? <Game /> : <IntroScene onComplete={() => setIntroDone(true)} />}
     </CRTEffectWrapper>
   );
 }
