@@ -227,6 +227,10 @@ export const demoDictionaries: LocaleDictionaries = {
     "intro.npm-link": { phrases: ["Ver paquete en npm"] },
     "intro.author.prefix": { phrases: ["Creado por"] },
     // --- UI labels ---
+    "ui.inventory": { phrases: ["Inventario"] },
+    "ui.inventory.open": { phrases: ["Abrir inventario"] },
+    "ui.inventory.close": { phrases: ["Cerrar inventario"] },
+    "ui.slot.empty": { phrases: ["Ranura {{n}} vacía"] },
     "ui.reset": { phrases: ["Reiniciar"] },
     "ui.reset.title": { phrases: ["Reiniciar Partida"] },
     "ui.reset.confirm": { phrases: ["¿Estás seguro? Se borrarán todos los progresos: inventario, ítems colocados, puertas abiertas y escena actual."] },
@@ -455,6 +459,10 @@ export const demoDictionaries: LocaleDictionaries = {
     "intro.npm-link": { phrases: ["View package on npm"] },
     "intro.author.prefix": { phrases: ["Created by"] },
     // --- UI labels ---
+    "ui.inventory": { phrases: ["Inventory"] },
+    "ui.inventory.open": { phrases: ["Open inventory"] },
+    "ui.inventory.close": { phrases: ["Close inventory"] },
+    "ui.slot.empty": { phrases: ["Slot {{n}} empty"] },
     "ui.reset": { phrases: ["Reset"] },
     "ui.reset.title": { phrases: ["Reset Game"] },
     "ui.reset.confirm": { phrases: ["Are you sure? All progress will be lost: inventory, placed items, opened doors and current scene."] },
