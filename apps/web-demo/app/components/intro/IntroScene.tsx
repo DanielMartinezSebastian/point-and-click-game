@@ -10,9 +10,10 @@ const SPEAKING_FRAMES = Array.from(
 const IDLE_FRAME = "/assets/sprites/david/david_idle.png";
 
 const INTRO_TEXT =
-  "¡Hola! Soy David. Esto es una demo del Point & Click Engine: " +
-  "una librería para juegos 2D y 2.5D agnóstica al framework, con " +
-  "su primera implementación en React Three Fiber. Diálogos, " +
+  "¡Hola! Soy David, un personaje inspirado en el hijo del " +
+  "desarrollador. Esto es una demo del Point & Click Engine: una " +
+  "librería para juegos 2D y 2.5D agnóstica al framework, con su " +
+  "primera implementación en React Three Fiber. Diálogos, " +
   "inventario, transiciones entre escenas, pathfinding... todo lo " +
   "que necesitas para una pequeña aventura. Cuando quieras, " +
   "continúa para empezar.";
@@ -343,9 +344,13 @@ const continueButtonStyle: CSSProperties = {
   borderRadius: "6px",
   padding: "12px 28px",
   fontFamily: "var(--font-pixel), 'Courier New', monospace",
-  fontSize: "1.15rem",
+  // clamp so the label always fits on a single line on narrow viewports —
+  // the wrapper is sized to content (no width constraint) so reducing the
+  // font scales the whole pill down rather than wrapping the text.
+  fontSize: "clamp(0.85rem, 3vw, 1.15rem)",
   letterSpacing: "0.22em",
   textTransform: "uppercase",
+  whiteSpace: "nowrap",
   cursor: "pointer",
   boxShadow: [
     "inset 0 2px 0 rgba(255,255,255,0.18)",
