@@ -1,0 +1,1 @@
+{"version":3,"file":"useKeyboardMovementInput.d.ts","sourceRoot":"","sources":["../../src/adapters/useKeyboardMovementInput.ts"],"names":[],"mappings":"AASA,MAAM,MAAM,qBAAqB,GAAG;IAClC,QAAQ,EAAE,OAAO,CAAC;IAClB,SAAS,EAAE,OAAO,CAAC;IACnB,MAAM,EAAE,OAAO,CAAC;IAChB,QAAQ,EAAE,OAAO,CAAC;IAClB,aAAa,EAAE,OAAO,CAAC;CACxB,CAAC;AAEF,wBAAgB,wBAAwB;;;EAiDvC"}
