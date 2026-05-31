@@ -15,26 +15,25 @@ import { useLocaleDetection } from "@pointclick-engine/engine-renderer-r3f";
 import { createWebI18nAdapter } from "./lib/platform-web";
 import { registerDemoDictionaries } from "../demo-content/dialogs";
 
+// Register once at module load — synchronous, safe to run outside a component.
+registerDemoDictionaries();
+
 const DEMO_AVAILABLE_LOCALES = ["es", "en"];
 
+// Shared adapter instance so both Home and Game use the same port.
+const i18nPort = createWebI18nAdapter({ availableLocales: DEMO_AVAILABLE_LOCALES });
+
+const I18N_CONFIG = {
+  // English is the safe default: it's the lingua franca of the web.
+  // The browser's navigator.language will upgrade it to "es" automatically
+  // for Spanish-speaking users; localStorage persists the manual choice.
+  defaultLocale: "en",
+  fallbackLocale: "en",
+  availableLocales: DEMO_AVAILABLE_LOCALES,
+};
+
 function Game() {
-  const i18nPort = useMemo(
-    () => createWebI18nAdapter({ availableLocales: DEMO_AVAILABLE_LOCALES }),
-    [],
-  );
-
-  useLocaleDetection({
-    port: i18nPort,
-    config: {
-      defaultLocale: "es",
-      fallbackLocale: "es",
-      availableLocales: DEMO_AVAILABLE_LOCALES,
-    },
-  });
-
   useEffect(() => {
-    registerDemoDictionaries();
-
     const runtime = createGameRuntime({
       scenes: Object.values(SCENES) as GameSceneConfig[],
       inventoryAdapter: {
@@ -56,23 +55,17 @@ function Game() {
 }
 
 export default function Home() {
-  // El runtime del juego (y por tanto música, inventario y escena por defecto)
-  // no se monta hasta que el intro termina — cumple "solo sonido de diálogo
-  // en el intro" sin tener que silenciar nada manualmente.
   const [introDone, setIntroDone] = useState(false);
+
+  // Boot i18n at the Home level so both the intro and the game share the same
+  // locale. Detection runs once on mount (bindPort → detectLocale), then
+  // persists on every change.
+  useLocaleDetection({ port: i18nPort, config: I18N_CONFIG });
 
   return (
     <CRTEffectWrapper
       preset="atari"
       scanlineOpacity={0.1}
-      // scanlineThickness={2}
-      // scanlineGap={2}
-      // enableGlow={true}
-      // glowColor="rgba(0, 255, 100, 0.15)"
-      // enableFlicker={true}
-      // flickerIntensity={0.8}
-      // enableSweep={true}
-      // sweepDuration={12}
     >
       {introDone ? <Game /> : <IntroScene onComplete={() => setIntroDone(true)} />}
     </CRTEffectWrapper>

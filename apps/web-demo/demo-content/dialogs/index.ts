@@ -210,6 +210,22 @@ export const demoDictionaries: LocaleDictionaries = {
         "Mira eso. Todo en su sitio. No suele pasar.",
       ],
     },
+    // --- Intro ---
+    "intro.text": {
+      phrases: [
+        "¡Hola! Soy David, un personaje inspirado en el hijo del " +
+        "desarrollador. Esto es una demo del Point & Click Engine: una " +
+        "librería para juegos 2D y 2.5D agnóstica al framework, con su " +
+        "primera implementación en React Three Fiber. Diálogos, " +
+        "inventario, transiciones entre escenas, pathfinding... todo lo " +
+        "que necesitas para una pequeña aventura. Cuando quieras, " +
+        "continúa para empezar.",
+      ],
+    },
+    "intro.start-hint": { phrases: ["PULSA EN CUALQUIER LUGAR PARA EMPEZAR"] },
+    "intro.continue": { phrases: ["CONTINUAR CON LA DEMO"] },
+    "intro.aria-label": { phrases: ["Introducción"] },
+    "intro.npm-link": { phrases: ["Ver paquete en npm"] },
     // --- UI labels ---
     "ui.reset": { phrases: ["Reiniciar"] },
     "ui.reset.title": { phrases: ["Reiniciar Partida"] },
@@ -423,6 +439,21 @@ export const demoDictionaries: LocaleDictionaries = {
         "Look at that. Everything in its place. Doesn't happen often.",
       ],
     },
+    // --- Intro ---
+    "intro.text": {
+      phrases: [
+        "Hi! I'm David, a character inspired by the developer's son. " +
+        "This is a demo of the Point & Click Engine: a framework-agnostic " +
+        "library for 2D and 2.5D games, with its first implementation in " +
+        "React Three Fiber. Dialogs, inventory, scene transitions, " +
+        "pathfinding... everything you need for a small adventure. " +
+        "Whenever you're ready, continue to get started.",
+      ],
+    },
+    "intro.start-hint": { phrases: ["CLICK ANYWHERE TO START"] },
+    "intro.continue": { phrases: ["CONTINUE TO DEMO"] },
+    "intro.aria-label": { phrases: ["Introduction"] },
+    "intro.npm-link": { phrases: ["View package on npm"] },
     // --- UI labels ---
     "ui.reset": { phrases: ["Reset"] },
     "ui.reset.title": { phrases: ["Reset Game"] },

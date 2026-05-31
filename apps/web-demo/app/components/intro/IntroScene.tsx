@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useI18n } from "@pointclick-engine/engine-renderer-r3f";
 import { webAudioAdapter } from "../../lib/platform-web-audio";
 
 const SPEAKING_FRAMES = Array.from(
@@ -10,15 +11,6 @@ const SPEAKING_FRAMES = Array.from(
 const IDLE_FRAME = "/assets/sprites/david/david_idle.png";
 
 const NPM_PACKAGE_URL = "https://www.npmjs.com/package/@pointclick-engine/engine-core";
-
-const INTRO_TEXT =
-  "¡Hola! Soy David, un personaje inspirado en el hijo del " +
-  "desarrollador. Esto es una demo del Point & Click Engine: una " +
-  "librería para juegos 2D y 2.5D agnóstica al framework, con su " +
-  "primera implementación en React Three Fiber. Diálogos, " +
-  "inventario, transiciones entre escenas, pathfinding... todo lo " +
-  "que necesitas para una pequeña aventura. Cuando quieras, " +
-  "continúa para empezar.";
 
 const CHARS_PER_SECOND = 30;
 const SPRITE_FPS = 8;
@@ -66,6 +58,8 @@ type IntroSceneProps = {
  * los acumule y los dispare todos juntos más adelante.
  */
 export function IntroScene({ onComplete }: IntroSceneProps) {
+  const { t } = useI18n();
+
   const [started, setStarted] = useState(false);
   const [displayedText, setDisplayedText] = useState("");
   const [typingDone, setTypingDone] = useState(false);
@@ -75,6 +69,17 @@ export function IntroScene({ onComplete }: IntroSceneProps) {
   // the typewriter effect resume from the current position instead of restarting
   // from 0 and visibly rewinding the text.
   const indexRef = useRef(0);
+
+  // Capture the intro text at the moment the user clicks to start — so if the
+  // locale changes mid-intro (unlikely, but possible) the typewriter doesn't
+  // restart. The ref is reset to 0 whenever introText changes (locale switch
+  // before clicking).
+  const introTextRef = useRef(t("intro.text"));
+  // Keep the ref up-to-date while the user hasn't started yet.
+  if (!started) {
+    introTextRef.current = t("intro.text");
+    indexRef.current = 0;
+  }
 
   const handleStart = useCallback(() => {
     if (started) return;
@@ -89,21 +94,22 @@ export function IntroScene({ onComplete }: IntroSceneProps) {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
 
+    const introText = introTextRef.current;
     const baseStepMs = Math.max(14, Math.floor(1000 / CHARS_PER_SECOND));
 
     const tick = () => {
       if (cancelled) return;
       indexRef.current += 1;
       const i = indexRef.current;
-      const newChar = INTRO_TEXT[i - 1];
-      const nextSlice = INTRO_TEXT.slice(0, i);
+      const newChar = introText[i - 1];
+      const nextSlice = introText.slice(0, i);
       setDisplayedText((prev) => (nextSlice.length > prev.length ? nextSlice : prev));
 
       if (newChar && newChar !== " " && newChar !== "\n") {
         playLetterSound();
       }
 
-      if (i >= INTRO_TEXT.length) {
+      if (i >= introText.length) {
         setTypingDone(true);
         return;
       }
@@ -113,7 +119,7 @@ export function IntroScene({ onComplete }: IntroSceneProps) {
     };
 
     // If a previous effect run already finished the text, don't restart.
-    if (indexRef.current >= INTRO_TEXT.length) {
+    if (indexRef.current >= introText.length) {
       setTypingDone(true);
       return;
     }
@@ -168,7 +174,7 @@ export function IntroScene({ onComplete }: IntroSceneProps) {
     <div
       onPointerDown={!started ? handleStart : undefined}
       style={containerStyle(!started)}
-      aria-label="Introducción"
+      aria-label={t("intro.aria-label")}
     >
       {/* Header — título de la librería + enlace externo a npm. */}
       <header style={headerStyle}>
@@ -177,8 +183,8 @@ export function IntroScene({ onComplete }: IntroSceneProps) {
           href={NPM_PACKAGE_URL}
           target="_blank"
           rel="noopener noreferrer"
-          aria-label="Ver paquete en npm"
-          title="Ver paquete en npm"
+          aria-label={t("intro.npm-link")}
+          title={t("intro.npm-link")}
           style={npmLinkStyle}
           onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
@@ -222,7 +228,7 @@ export function IntroScene({ onComplete }: IntroSceneProps) {
       <footer style={footerStyle}>
         {!started && (
           <p style={startHintStyle}>
-            PULSA EN CUALQUIER LUGAR PARA EMPEZAR
+            {t("intro.start-hint")}
           </p>
         )}
         {continueVisible && (
@@ -237,7 +243,7 @@ export function IntroScene({ onComplete }: IntroSceneProps) {
               (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
             }}
           >
-            CONTINUAR CON LA DEMO
+            {t("intro.continue")}
           </button>
         )}
       </footer>
