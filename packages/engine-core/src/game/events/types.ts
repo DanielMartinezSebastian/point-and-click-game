@@ -1,4 +1,4 @@
-import type { GameVec3, GameScene, AudioSettings, SoundCategory } from "../types";
+import type { AudioSettings, GameScene, GameVec3, Locale, SoundCategory } from "../types";
 
 /**
  * Union exhaustiva de todos los eventos que el motor puede emitir.
@@ -42,7 +42,10 @@ export type GameEvent =
   | { type: "audio:sfxRequested"; soundUrl: string; category: SoundCategory; volume?: number }
   | { type: "audio:musicRequested"; trackUrl: string; fadeMs?: number; volume?: number; loop?: boolean }
   | { type: "audio:musicStopped"; fadeMs?: number }
-  | { type: "audio:settingsChanged"; settings: AudioSettings };
+  | { type: "audio:settingsChanged"; settings: AudioSettings }
+  // i18n
+  | { type: "i18n:localeChanged"; locale: Locale; previous: Locale }
+  | { type: "i18n:dictionaryUpdated"; locale: Locale; keysAdded: number };
 
 export type GameEventType = GameEvent["type"];
 

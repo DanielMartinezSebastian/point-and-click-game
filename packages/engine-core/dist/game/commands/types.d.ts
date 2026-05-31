@@ -1,4 +1,4 @@
-import type { GameVec3, SoundCategory } from "../types";
+import type { DialogDictionary, GameVec3, Locale, SoundCategory } from "../types";
 type AudioMuteTarget = "master" | SoundCategory;
 /**
  * Union exhaustiva de todos los comandos que el motor acepta.
@@ -50,6 +50,13 @@ export type GameCommand = {
     type: "audio:setVolume";
     target: AudioMuteTarget;
     volume: number;
+} | {
+    type: "i18n:setLocale";
+    locale: Locale;
+} | {
+    type: "i18n:registerDictionary";
+    locale: Locale;
+    dict: DialogDictionary;
 };
 export type GameCommandType = GameCommand["type"];
 export {};

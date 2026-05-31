@@ -1,4 +1,4 @@
-import type { GameVec3, GameScene, AudioSettings, SoundCategory } from "../types";
+import type { AudioSettings, GameScene, GameVec3, Locale, SoundCategory } from "../types";
 /**
  * Union exhaustiva de todos los eventos que el motor puede emitir.
  * Naming: <domain>:<action> (ver ADR-0006).
@@ -76,6 +76,14 @@ export type GameEvent = {
 } | {
     type: "audio:settingsChanged";
     settings: AudioSettings;
+} | {
+    type: "i18n:localeChanged";
+    locale: Locale;
+    previous: Locale;
+} | {
+    type: "i18n:dictionaryUpdated";
+    locale: Locale;
+    keysAdded: number;
 };
 export type GameEventType = GameEvent["type"];
 export type GameEventHandler<T extends GameEventType = GameEventType> = (event: Extract<GameEvent, {

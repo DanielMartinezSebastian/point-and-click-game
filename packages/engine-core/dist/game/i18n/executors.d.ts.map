@@ -1,0 +1,1 @@
+{"version":3,"file":"executors.d.ts","sourceRoot":"","sources":["../../../src/game/i18n/executors.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,cAAc,EAAE,MAAM,4BAA4B,CAAC;AACjE,OAAO,KAAK,EAAE,SAAS,EAAE,MAAM,iBAAiB,CAAC;AAIjD,KAAK,MAAM,GAAG,CAAC,KAAK,EAAE,SAAS,KAAK,IAAI,CAAC;AAEzC;;;;;;GAMG;AACH,wBAAgB,qBAAqB,CACnC,QAAQ,EAAE,cAAc,EACxB,IAAI,CAAC,EAAE,MAAM,GACZ,MAAM,IAAI,CAyBZ"}

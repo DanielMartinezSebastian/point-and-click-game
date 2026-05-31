@@ -237,4 +237,35 @@ export type RuntimeDialogEvent = {
 };
 export type RuntimeEvent = RuntimeMoveEvent | RuntimeCollideEvent | RuntimeDropEvent | RuntimeDialogEvent;
 export type RuntimeEventHandler = (event: RuntimeEvent) => void;
+/**
+ * BCP-47 language tag (e.g. "es", "en", "es-MX", "pt-BR").
+ * Intentionally a plain string — not a union — so consumers can register
+ * any locale without modifying engine types.
+ */
+export type Locale = string;
+/** A single dialog entry: one or more phrases. If >1, the translator picks one at random. */
+export interface DialogEntry {
+    phrases: string[];
+}
+/** Map of dialog key → entry, for a single locale. */
+export type DialogDictionary = Record<DialogKey, DialogEntry>;
+/** Map of locale → dictionary. Used by `registerDictionaries`. */
+export type LocaleDictionaries = Record<Locale, DialogDictionary>;
+/** Engine-wide i18n configuration. */
+export interface I18nConfig {
+    /** Locale used at boot when no detection / persistence applies. */
+    defaultLocale: Locale;
+    /** Locale consulted when a key is missing in the active locale. */
+    fallbackLocale: Locale;
+    /** Whitelist of locales the user may switch to. */
+    availableLocales: Locale[];
+}
+/** Reactive state held by `i18nStore`. */
+export interface I18nState {
+    locale: Locale;
+    availableLocales: Locale[];
+    fallbackLocale: Locale;
+}
+/** Conservative defaults. Hosts should override via `createI18nStore` / `resetI18nStore`. */
+export declare const DEFAULT_I18N_CONFIG: I18nConfig;
 //# sourceMappingURL=index.d.ts.map

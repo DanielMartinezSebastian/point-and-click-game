@@ -25,3 +25,6 @@ export type {
 export { HeadlessGameLoop } from "./headlessGameLoop";
 export { HeadlessInput } from "./headlessInput";
 export { HeadlessAudioAdapter, type HeadlessAudioCall } from "./headlessAudio";
+
+export type { I18nPort } from "./i18n";
+export { HeadlessI18nAdapter, type HeadlessI18nCall } from "./headlessI18n";

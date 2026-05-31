@@ -1,12 +1,27 @@
-export type Locale = "es" | "en";
+/**
+ * Demo dialog types.
+ *
+ * The engine itself uses `Locale = string` so any BCP-47 tag is valid. The
+ * demo narrows that down for autocompletion in scene/item authoring.
+ */
+
+import type {
+  DialogDictionary as EngineDialogDictionary,
+  DialogEntry as EngineDialogEntry,
+  Locale as EngineLocale,
+  LocaleDictionaries,
+} from "@pointclick-engine/engine-core";
+
+/** Narrowed alias for autocompletion inside the demo. */
+export type DemoLocale = "es" | "en";
+
+/** Re-export of the engine Locale for callers that want the wide type. */
+export type Locale = EngineLocale;
 
 export type DialogKey = string;
 
-export type DialogEntry = {
-  /** Una o varias frases. Se elegirá una aleatoriamente cuando haya múltiples. */
-  phrases: string[];
-};
+export type DialogEntry = EngineDialogEntry;
+export type DialogDictionary = EngineDialogDictionary;
 
-export type DialogDictionary = Record<string, DialogEntry>;
-
-export type DialogLocales = Record<Locale, DialogDictionary>;
+/** Legacy alias retained for backward-compat with existing demo code. */
+export type DialogLocales = LocaleDictionaries;

@@ -16,3 +16,11 @@ export {
   saveAudioSettings,
   type AudioSettingsStore,
 } from "./audioSettingsStore";
+export {
+  createI18nStore,
+  getI18nStore,
+  resetI18nStore,
+  subscribeI18n,
+  setI18nStoreEmitter,
+  type I18nStore,
+} from "./i18nStore";

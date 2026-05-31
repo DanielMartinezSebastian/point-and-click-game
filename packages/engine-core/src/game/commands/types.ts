@@ -1,4 +1,4 @@
-import type { GameVec3, SoundCategory } from "../types";
+import type { DialogDictionary, GameVec3, Locale, SoundCategory } from "../types";
 
 // Duplicated from ports/audio.ts to avoid circular imports.
 type AudioMuteTarget = "master" | SoundCategory;
@@ -28,6 +28,9 @@ export type GameCommand =
   // Audio
   | { type: "audio:playSfx"; soundUrl: string; category?: SoundCategory; volume?: number }
   | { type: "audio:setMuted"; target: AudioMuteTarget; muted: boolean }
-  | { type: "audio:setVolume"; target: AudioMuteTarget; volume: number };
+  | { type: "audio:setVolume"; target: AudioMuteTarget; volume: number }
+  // i18n
+  | { type: "i18n:setLocale"; locale: Locale }
+  | { type: "i18n:registerDictionary"; locale: Locale; dict: DialogDictionary };
 
 export type GameCommandType = GameCommand["type"];

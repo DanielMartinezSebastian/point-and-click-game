@@ -6,6 +6,13 @@ type StoreEmitter = (event: GameEvent) => void;
  * al inicializar el bus. Si no se llama, el store funciona en zero-event mode.
  */
 export declare function setSceneStoreEmitter(emitter: StoreEmitter | null): void;
+type SceneStoreLogger = (event: string, payload: Record<string, unknown>) => void;
+/**
+ * Inyecta un logger custom para debug de scene-store (p.ej. window.__gameTrace en browser).
+ * Si no se llama, el store usa console.info en desarrollo.
+ * Pasar null para deshabilitar el logger completamente.
+ */
+export declare function setSceneStoreLogger(logger: SceneStoreLogger | null): void;
 /**
  * sceneStore – estado runtime de la escena activa.
  *
