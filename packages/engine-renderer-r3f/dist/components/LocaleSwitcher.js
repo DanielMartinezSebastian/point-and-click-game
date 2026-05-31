@@ -3,7 +3,9 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useI18n } from "../hooks/useI18n";
 const DEFAULT_BUTTON_STYLE = {
     padding: "4px 10px",
-    border: "1px solid transparent",
+    borderWidth: 1,
+    borderStyle: "solid",
+    borderColor: "transparent",
     background: "transparent",
     cursor: "pointer",
     fontWeight: 400,

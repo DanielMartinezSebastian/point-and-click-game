@@ -29,7 +29,9 @@ export interface LocaleSwitcherProps {
 
 const DEFAULT_BUTTON_STYLE: CSSProperties = {
   padding: "4px 10px",
-  border: "1px solid transparent",
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: "transparent",
   background: "transparent",
   cursor: "pointer",
   fontWeight: 400,
