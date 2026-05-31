@@ -218,14 +218,14 @@ export const demoDictionaries: LocaleDictionaries = {
         "librería para juegos 2D y 2.5D agnóstica al framework, con su " +
         "primera implementación en React Three Fiber. Diálogos, " +
         "inventario, transiciones entre escenas, pathfinding... todo lo " +
-        "que necesitas para una pequeña aventura. Cuando quieras, " +
-        "continúa para empezar.",
+        "que necesitas para crear una pequeña aventura.",
       ],
     },
     "intro.start-hint": { phrases: ["PULSA EN CUALQUIER LUGAR PARA EMPEZAR"] },
     "intro.continue": { phrases: ["CONTINUAR CON LA DEMO"] },
     "intro.aria-label": { phrases: ["Introducción"] },
     "intro.npm-link": { phrases: ["Ver paquete en npm"] },
+    "intro.author.prefix": { phrases: ["Creado por"] },
     // --- UI labels ---
     "ui.reset": { phrases: ["Reiniciar"] },
     "ui.reset.title": { phrases: ["Reiniciar Partida"] },
@@ -446,14 +446,14 @@ export const demoDictionaries: LocaleDictionaries = {
         "This is a demo of the Point & Click Engine: a framework-agnostic " +
         "library for 2D and 2.5D games, with its first implementation in " +
         "React Three Fiber. Dialogs, inventory, scene transitions, " +
-        "pathfinding... everything you need for a small adventure. " +
-        "Whenever you're ready, continue to get started.",
+        "pathfinding... everything you need to create a small adventure.",
       ],
     },
     "intro.start-hint": { phrases: ["CLICK ANYWHERE TO START"] },
     "intro.continue": { phrases: ["CONTINUE TO DEMO"] },
     "intro.aria-label": { phrases: ["Introduction"] },
     "intro.npm-link": { phrases: ["View package on npm"] },
+    "intro.author.prefix": { phrases: ["Created by"] },
     // --- UI labels ---
     "ui.reset": { phrases: ["Reset"] },
     "ui.reset.title": { phrases: ["Reset Game"] },

@@ -176,20 +176,33 @@ export function IntroScene({ onComplete }: IntroSceneProps) {
       style={containerStyle(!started)}
       aria-label={t("intro.aria-label")}
     >
-      {/* Header — título de la librería + enlace externo a npm. */}
+      {/* Header — título, enlace npm y crédito de autoría. */}
       <header style={headerStyle}>
-        <span style={titleStyle}>POINT &amp; CLICK ENGINE</span>
+        <div style={headerTitleRowStyle}>
+          <span style={titleStyle}>POINT &amp; CLICK ENGINE</span>
+          <a
+            href={NPM_PACKAGE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={t("intro.npm-link")}
+            title={t("intro.npm-link")}
+            style={npmLinkStyle}
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <ExternalLinkIcon />
+          </a>
+        </div>
         <a
-          href={NPM_PACKAGE_URL}
+          href="https://www.linkedin.com/in/danielmartinezsebastian"
           target="_blank"
           rel="noopener noreferrer"
-          aria-label={t("intro.npm-link")}
-          title={t("intro.npm-link")}
-          style={npmLinkStyle}
+          style={authorLinkStyle}
           onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
         >
-          <ExternalLinkIcon />
+          {t("intro.author.prefix")}{" "}
+          <span style={authorNameStyle}>Daniel Martínez Sebastián</span>
         </a>
       </header>
 
@@ -204,7 +217,7 @@ export function IntroScene({ onComplete }: IntroSceneProps) {
         />
 
         {/* Bocadillo — sólo visible tras el primer click. Anclado al sprite
-            (top:62%) sobre la parte inferior del torso / cintura. Su ancho es
+            (top:37%) sobre el pecho del personaje. Su ancho es
             mayor que el sprite y se centra horizontalmente. Al crecer
             verticalmente lo hace hacia abajo, sin desplazar nada.
             El wrapper hace la posición + fade-in (su animation terminaría en
@@ -296,27 +309,50 @@ function containerStyle(awaitingStart: boolean): CSSProperties {
     paddingBottom: "clamp(12px, 2vh, 28px)",
     fontFamily: "var(--font-pixel), 'Courier New', monospace",
     imageRendering: "pixelated",
-    cursor: awaitingStart ? "pointer" : "default",
+    cursor: awaitingStart ? "pointer" : undefined,
     userSelect: "none",
     overflow: "hidden",
   };
 }
 
-// Header — title + npm link icon. Horizontal pill at the top.
+// Header — title row + npm link + author credit. Stacks vertically.
 const headerStyle: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  gap: "6px",
+  padding: "6px 10px",
+  color: "#84e6ff",
+  textShadow: "0 0 24px rgba(132,230,255,0.55), 0 0 48px rgba(132,230,255,0.18)",
+};
+
+// Row: big title + npm icon side-by-side.
+const headerTitleRowStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: "10px",
-  padding: "6px 10px",
-  color: "#84e6ff",
   letterSpacing: "0.18em",
   textTransform: "uppercase",
-  fontSize: "clamp(0.85rem, 2.6vw, 1.1rem)",
-  textShadow: "0 0 24px rgba(132,230,255,0.55), 0 0 48px rgba(132,230,255,0.18)",
+  fontSize: "clamp(1.7rem, 5.2vw, 2.2rem)",
 };
 
 const titleStyle: CSSProperties = {
   whiteSpace: "nowrap",
+};
+
+const authorLinkStyle: CSSProperties = {
+  color: "rgba(132,230,255,0.7)",
+  fontSize: "clamp(0.7rem, 1.6vw, 0.9rem)",
+  letterSpacing: "0.12em",
+  textDecoration: "none",
+  cursor: "pointer",
+};
+
+// Only the name gets the underline treatment.
+const authorNameStyle: CSSProperties = {
+  textDecoration: "underline",
+  textUnderlineOffset: "3px",
+  cursor: "pointer",
 };
 
 const npmLinkStyle: CSSProperties = {
@@ -362,13 +398,12 @@ const spriteImgStyle: CSSProperties = {
 };
 
 // Wrapper — handles absolute positioning + fade-in. Anchored to spriteWrap.
-// top:62% places the bubble's top edge over the waist / lower torso (sprite
-// is 93x255; 62% ≈ y=158/255, just below the printed hoodie area). Slightly
-// lower than the earlier 58% so the bubble's vertical mass sits in the
-// lower half of the character, leaving the face/upper body visible.
+// top:37% places the bubble's top edge over the chest area (sprite is 93x255;
+// 37% ≈ y=94/255, roughly the hoodie chest). Moved up a quarter (~25pp) from
+// the previous 62% so the bubble floats higher relative to the character.
 const bubbleWrapStyle: CSSProperties = {
   position: "absolute",
-  top: "62%",
+  top: "37%",
   left: "50%",
   transform: "translateX(-50%)",
   width: "min(560px, 86vw)",

@@ -1,4 +1,4 @@
-export declare const RENDERER_VERSION = "0.1.0";
+export declare const RENDERER_VERSION = "0.4.0";
 export { GameCanvasCore } from "./components/GameCanvasCore";
 export type { GameCanvasCoreProps } from "./components/GameCanvasCore";
 export { useR3FGameLoop } from "./adapters/gameLoopR3F";
