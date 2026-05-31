@@ -210,6 +210,18 @@ export const demoDictionaries: LocaleDictionaries = {
         "Mira eso. Todo en su sitio. No suele pasar.",
       ],
     },
+    // --- UI labels ---
+    "ui.reset": { phrases: ["Reiniciar"] },
+    "ui.reset.title": { phrases: ["Reiniciar Partida"] },
+    "ui.reset.confirm": { phrases: ["¿Estás seguro? Se borrarán todos los progresos: inventario, ítems colocados, puertas abiertas y escena actual."] },
+    "ui.cancel": { phrases: ["Cancelar"] },
+    "ui.language": { phrases: ["Idioma"] },
+    "ui.audio.sound": { phrases: ["Sonido"] },
+    "ui.audio.sound.off": { phrases: ["Sonido off"] },
+    "ui.audio.music": { phrases: ["Música"] },
+    "ui.audio.music.off": { phrases: ["Música off"] },
+    "ui.audio.sfx": { phrases: ["Efectos"] },
+    "ui.audio.sfx.off": { phrases: ["Efectos off"] },
   },
   en: {
     boundaryHit: {
@@ -411,18 +423,28 @@ export const demoDictionaries: LocaleDictionaries = {
         "Look at that. Everything in its place. Doesn't happen often.",
       ],
     },
+    // --- UI labels ---
+    "ui.reset": { phrases: ["Reset"] },
+    "ui.reset.title": { phrases: ["Reset Game"] },
+    "ui.reset.confirm": { phrases: ["Are you sure? All progress will be lost: inventory, placed items, opened doors and current scene."] },
+    "ui.cancel": { phrases: ["Cancel"] },
+    "ui.language": { phrases: ["Language"] },
+    "ui.audio.sound": { phrases: ["Sound"] },
+    "ui.audio.sound.off": { phrases: ["Sound off"] },
+    "ui.audio.music": { phrases: ["Music"] },
+    "ui.audio.music.off": { phrases: ["Music off"] },
+    "ui.audio.sfx": { phrases: ["Effects"] },
+    "ui.audio.sfx.off": { phrases: ["Effects off"] },
   },
 };
 
 /**
- * Idempotent: register the demo's dictionaries with the engine's i18n
- * registry. Call once at boot — repeated calls no-op.
+ * Register the demo's dictionaries with the engine's i18n registry.
+ * The engine registry handles incremental merges, so calling this multiple
+ * times is safe (duplicate keys emit a dev warning but don't break state).
  */
-let _registered = false;
 export function registerDemoDictionaries(): void {
-  if (_registered) return;
   registerDictionaries(demoDictionaries);
-  _registered = true;
 }
 
 /**

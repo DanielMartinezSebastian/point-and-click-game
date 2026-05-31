@@ -4,7 +4,7 @@ import gsap from "gsap";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 
-import { LocaleSwitcher } from "@pointclick-engine/engine-renderer-r3f";
+import { LocaleSwitcher, useI18n } from "@pointclick-engine/engine-renderer-r3f";
 
 import { ConfirmationDialog } from "./ConfirmationDialog";
 import { MuteToggle } from "./MuteToggle";
@@ -85,6 +85,8 @@ export function InventoryUI({
   const backpackSpinTokenRef = useRef(0);
   const panelRef = useRef<HTMLDivElement>(null);
   const panelTweenRef = useRef<gsap.core.Tween | null>(null);
+
+  const { t } = useI18n();
 
   useEffect(() => {
     const media = browserEnvironmentAdapter.matchMedia("(max-width: 768px)");
@@ -300,10 +302,10 @@ export function InventoryUI({
     <>
       <ConfirmationDialog
         isOpen={isResetConfirmOpen}
-        title="Reiniciar Partida"
-        message="¿Estás seguro? Se borrarán todos los progresos: inventario, ítems colocados, puertas abiertas y escena actual."
-        confirmText="Reiniciar"
-        cancelText="Cancelar"
+        title={t("ui.reset.title")}
+        message={t("ui.reset.confirm")}
+        confirmText={t("ui.reset")}
+        cancelText={t("ui.cancel")}
         isDangerous={true}
         onConfirm={() => {
           localStorage.clear();
@@ -445,7 +447,7 @@ export function InventoryUI({
                 target.style.backgroundColor = "rgb(173 31 44 / 100%)";
               }}
             >
-              🔄 Reiniciar
+              🔄 {t("ui.reset")}
             </button>
 
             <AudioMuteControls />
@@ -460,10 +462,10 @@ export function InventoryUI({
                 fontSize: "12px",
               }}
             >
-              <span style={{ opacity: 0.6 }}>Idioma:</span>
+              <span style={{ opacity: 0.6 }}>{t("ui.language")}:</span>
               <LocaleSwitcher
                 labels={{ es: "Español", en: "English" }}
-                ariaLabel="Idioma"
+                ariaLabel={t("ui.language")}
               />
             </div>
 
@@ -535,25 +537,26 @@ export function InventoryUI({
 
 function AudioMuteControls() {
   const audio = useAudioSettings();
+  const { t } = useI18n();
 
   return (
     <div style={{ display: "grid", gap: "6px", marginTop: "10px" }}>
       <MuteToggle
         icon={audio.masterMuted ? "🔇" : "🔊"}
-        label={audio.masterMuted ? "Sonido off" : "Sonido"}
+        label={audio.masterMuted ? t("ui.audio.sound.off") : t("ui.audio.sound")}
         pressed={audio.masterMuted}
         onClick={() => audioSettingsStore.setMasterMuted(!audio.masterMuted)}
       />
       <MuteToggle
         icon={audio.musicMuted ? "🔇" : "🎵"}
-        label={audio.musicMuted ? "Música off" : "Música"}
+        label={audio.musicMuted ? t("ui.audio.music.off") : t("ui.audio.music")}
         pressed={audio.musicMuted}
         disabled={audio.masterMuted}
         onClick={() => audioSettingsStore.setMusicMuted(!audio.musicMuted)}
       />
       <MuteToggle
         icon={audio.sfxMuted ? "🔇" : "🔔"}
-        label={audio.sfxMuted ? "Efectos off" : "Efectos"}
+        label={audio.sfxMuted ? t("ui.audio.sfx.off") : t("ui.audio.sfx")}
         pressed={audio.sfxMuted}
         disabled={audio.masterMuted}
         onClick={() => audioSettingsStore.setSfxMuted(!audio.sfxMuted)}
