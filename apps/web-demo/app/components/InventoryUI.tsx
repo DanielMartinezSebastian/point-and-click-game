@@ -318,7 +318,7 @@ export function InventoryUI({
         onClick={onToggle}
         onPointerEnter={() => setIsBackpackHovered(true)}
         onPointerLeave={() => setIsBackpackHovered(false)}
-        aria-label={isOpen ? "Cerrar inventario" : "Abrir inventario"}
+        aria-label={isOpen ? t("ui.inventory.close") : t("ui.inventory.open")}
         style={{
           position: "absolute",
           left: isMobile ? "22px" : "18px",
@@ -338,7 +338,7 @@ export function InventoryUI({
       >
         <Image
           src={backpackSpriteSrc}
-          alt="Inventario"
+          alt={t("ui.inventory")}
           width={isMobile ? 62 : 93}
           height={isMobile ? 62 : 93}
           unoptimized
@@ -375,7 +375,7 @@ export function InventoryUI({
             <button
               type="button"
               onClick={onToggle}
-              aria-label="Cerrar inventario"
+              aria-label={t("ui.inventory.close")}
               style={{
                 position: "absolute",
                 top: isMobile ? "-18px" : "-16px",
@@ -415,7 +415,7 @@ export function InventoryUI({
                 paddingBottom: "4px",
               }}
             >
-              Inventario
+              {t("ui.inventory")}
             </strong>
 
             <button
@@ -455,17 +455,37 @@ export function InventoryUI({
             <div
               style={{
                 display: "flex",
-                gap: "6px",
+                gap: "4px",
                 alignItems: "center",
+                justifyContent: "center",
                 marginTop: "10px",
-                color: "white",
-                fontSize: "12px",
               }}
             >
-              <span style={{ opacity: 0.6 }}>{t("ui.language")}:</span>
               <LocaleSwitcher
-                labels={{ es: "Español", en: "English" }}
                 ariaLabel={t("ui.language")}
+                renderOption={({ locale, isActive, onClick }) => (
+                  <button
+                    key={locale}
+                    type="button"
+                    onClick={onClick}
+                    aria-current={isActive ? "true" : undefined}
+                    aria-label={locale === "es" ? "Español" : "English"}
+                    style={{
+                      fontSize: "22px",
+                      lineHeight: 1,
+                      padding: "3px 5px",
+                      border: "2px solid",
+                      borderColor: isActive ? "rgb(132 230 255 / 88%)" : "transparent",
+                      borderRadius: "4px",
+                      background: isActive ? "rgb(26 82 112 / 60%)" : "transparent",
+                      cursor: "pointer",
+                      opacity: isActive ? 1 : 0.45,
+                      transition: "opacity 0.15s, border-color 0.15s, background 0.15s",
+                    }}
+                  >
+                    {locale === "es" ? "🇪🇸" : "🇬🇧"}
+                  </button>
+                )}
               />
             </div>
 
@@ -483,7 +503,7 @@ export function InventoryUI({
                   type="button"
                   onPointerDown={(event) => handlePointerDown(event, index)}
                   style={slotStyle(Boolean(stack))}
-                  aria-label={stack ? `Slot ${index + 1}: ${stack.name}` : `Slot ${index + 1} vacio`}
+                  aria-label={stack ? `Slot ${index + 1}: ${stack.name}` : t("ui.slot.empty", { vars: { n: index + 1 } })}
                 >
                   {stack && (
                     <>
