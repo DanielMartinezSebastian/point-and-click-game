@@ -242,8 +242,13 @@ function containerStyle(awaitingStart: boolean): CSSProperties {
     zIndex: 100,
     background: "#070d1f",
     display: "flex",
-    alignItems: "center",
+    // Anchor to the top (instead of vertical-centering) so the bubble +
+    // continue button below the sprite don't leave a big empty band above
+    // the character. The paddingTop sets how much breathing room sits above
+    // the head — small on tiny viewports, comfortable on tall ones.
+    alignItems: "flex-start",
     justifyContent: "center",
+    paddingTop: "clamp(16px, 4vh, 56px)",
     fontFamily: "var(--font-pixel), 'Courier New', monospace",
     imageRendering: "pixelated",
     cursor: awaitingStart ? "pointer" : "default",
