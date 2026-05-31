@@ -31,7 +31,7 @@ import { useTransitionSystem } from "../lib/engine/runtime/useTransitionSystem";
 import { useTransitionEditorController } from "../lib/engine/runtime/useTransitionEditorController";
 import { legacyRuntimeEventToGameEvent, type RuntimeEvent, type GameSceneTransition, type GameScene, useSceneStore } from "@pointclick-engine/engine-core";
 import { getGameRuntime } from "../lib/engine/publicApi";
-import { webAudioAdapter, bindAudioPersistence } from "../lib/platform-web-audio";
+import { webAudioAdapter } from "../lib/platform-web-audio";
 import { audioSettingsStore } from "../store/audio";
 import { useMobileInputStore } from "../store/mobileInputStore";
 import { useSceneEditorStore } from "../store/sceneEditorStore";
@@ -165,21 +165,21 @@ export default function GameTouchCanvas({
     passthrough: baseRuntimeEvent,
   });
 
-  // Initialize audio persistence and apply settings to adapter
+  // Sync audio settings (already hydrated from localStorage at module load)
+  // to the webAudioAdapter on mount AND on every subsequent change. Without
+  // the initial apply the adapter starts at its defaults and ignores any
+  // persisted mute until the user toggles a setting.
   useEffect(() => {
-    bindAudioPersistence(audioSettingsStore);
-
-    // Sync settings changes to webAudioAdapter
-    const unsubscribe = audioSettingsStore.subscribe((state) => {
+    const apply = (state: ReturnType<typeof audioSettingsStore.getState>) => {
       webAudioAdapter.setMuted("master", state.masterMuted);
       webAudioAdapter.setMuted("music", state.musicMuted);
       webAudioAdapter.setMuted("sfx", state.sfxMuted);
       webAudioAdapter.setVolume("master", state.masterVolume);
       webAudioAdapter.setVolume("music", state.musicVolume);
       webAudioAdapter.setVolume("sfx", state.sfxVolume);
-    });
-
-    return unsubscribe;
+    };
+    apply(audioSettingsStore.getState());
+    return audioSettingsStore.subscribe(apply);
   }, []);
 
   // Click sound for inventory toggle

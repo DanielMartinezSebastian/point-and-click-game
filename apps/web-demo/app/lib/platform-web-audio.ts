@@ -74,12 +74,19 @@ export class WebAudioAdapter implements AudioPort {
     return pool[0];
   }
 
-  private effectiveVolume(category: SoundCategory): number {
-    if (this.mute.master) return 0;
-    if (category === "music" && this.mute.music) return 0;
-    if ((category === "sfx" || category === "ui" || category === "ambient") && this.mute.sfx)
-      return 0;
+  private isCategoryMuted(category: SoundCategory): boolean {
+    if (this.mute.master) return true;
+    if (category === "music" && this.mute.music) return true;
+    if (
+      (category === "sfx" || category === "ui" || category === "ambient") &&
+      this.mute.sfx
+    )
+      return true;
+    return false;
+  }
 
+  private effectiveVolume(category: SoundCategory): number {
+    if (this.isCategoryMuted(category)) return 0;
     const baseVol =
       category === "music" ? this.vol.music : this.vol.sfx;
     return baseVol * this.vol.master;
@@ -95,10 +102,15 @@ export class WebAudioAdapter implements AudioPort {
 
   playSound(def: SoundDefinition, opts?: AudioPlayOptions): void {
     if (!this.isBrowser) return;
+    // Mute always wins over an explicit per-play volume override.
+    if (this.isCategoryMuted(def.category)) return;
 
     const el = this.getOrCreateAudioElement(def.url);
     el.currentTime = 0;
-    el.volume = opts?.volume ?? this.effectiveVolume(def.category);
+    el.volume =
+      opts?.volume !== undefined
+        ? Math.max(0, Math.min(1, opts.volume * this.vol.master))
+        : this.effectiveVolume(def.category);
 
     this.tryPlay(() => {
       el.play().catch(() => {
