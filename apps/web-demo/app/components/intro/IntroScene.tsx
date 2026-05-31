@@ -9,6 +9,8 @@ const SPEAKING_FRAMES = Array.from(
 );
 const IDLE_FRAME = "/assets/sprites/david/david_idle.png";
 
+const NPM_PACKAGE_URL = "https://www.npmjs.com/package/@pointclick-engine/engine-core";
+
 const INTRO_TEXT =
   "¡Hola! Soy David, un personaje inspirado en el hijo del " +
   "desarrollador. Esto es una demo del Point & Click Engine: una " +
@@ -168,9 +170,25 @@ export function IntroScene({ onComplete }: IntroSceneProps) {
       style={containerStyle(!started)}
       aria-label="Introducción"
     >
-      {/* Sprite — único hijo en flujo. El bocadillo se ancla en absolute a
-          su contenedor (position:relative) y el sprite NO se mueve cuando
-          el bocadillo aparece o crece. */}
+      {/* Header — título de la librería + enlace externo a npm. */}
+      <header style={headerStyle}>
+        <span style={titleStyle}>POINT &amp; CLICK ENGINE</span>
+        <a
+          href={NPM_PACKAGE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Ver paquete en npm"
+          title="Ver paquete en npm"
+          style={npmLinkStyle}
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <ExternalLinkIcon />
+        </a>
+      </header>
+
+      {/* Sprite — el bocadillo se ancla en absolute a su contenedor (relative)
+          y el sprite NO se mueve cuando el bocadillo aparece o crece. */}
       <div style={spriteWrapStyle}>
         <img
           src={currentSprite}
@@ -180,12 +198,12 @@ export function IntroScene({ onComplete }: IntroSceneProps) {
         />
 
         {/* Bocadillo — sólo visible tras el primer click. Anclado al sprite
-            (top:58%) para que quede sobre la parte inferior del torso. Su
-            ancho es mayor que el sprite y se centra horizontalmente; al
-            crecer verticalmente lo hace hacia abajo, sin desplazar nada.
-            El wrapper hace la posición + fade-in (su animation termina en
+            (top:62%) sobre la parte inferior del torso / cintura. Su ancho es
+            mayor que el sprite y se centra horizontalmente. Al crecer
+            verticalmente lo hace hacia abajo, sin desplazar nada.
+            El wrapper hace la posición + fade-in (su animation terminaría en
             translateY(0) y machacaría el translateX(-50%) si lo mezcláramos
-            en el mismo elemento que el bubble). */}
+            con el bubble — la keyframe se simplificó a opacity-only). */}
         {started && (
           <div style={bubbleWrapStyle}>
             <div style={bubbleStyle}>
@@ -198,19 +216,16 @@ export function IntroScene({ onComplete }: IntroSceneProps) {
         )}
       </div>
 
-      {/* Start hint — sólo antes del primer click. */}
-      {!started && (
-        <p style={startHintStyle}>
-          PULSA EN CUALQUIER LUGAR PARA EMPEZAR
-        </p>
-      )}
-
-      {/* Continuar — aparece cuando el typing termina (+ pequeña pausa).
-          El wrapper se posiciona en absolute para que el botón no empuje al
-          sprite cuando se monta. El botón interior gestiona libremente su
-          propia transform para el hover. */}
-      {continueVisible && (
-        <div style={continueWrapStyle}>
+      {/* Footer — reserva una banda inferior fija para que el start-hint y el
+          botón de continuar se intercambien SIN desplazar al sprite y dejen
+          espacios equilibrados respecto al header de arriba. */}
+      <footer style={footerStyle}>
+        {!started && (
+          <p style={startHintStyle}>
+            PULSA EN CUALQUIER LUGAR PARA EMPEZAR
+          </p>
+        )}
+        {continueVisible && (
           <button
             type="button"
             onClick={handleContinue}
@@ -224,12 +239,33 @@ export function IntroScene({ onComplete }: IntroSceneProps) {
           >
             CONTINUAR CON LA DEMO
           </button>
-        </div>
-      )}
+        )}
+      </footer>
 
       {/* Scanlines — sutil, para ligar visualmente con el resto de la demo. */}
       <div style={scanlinesStyle} />
     </div>
+  );
+}
+
+function ExternalLinkIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.4"
+      strokeLinecap="square"
+      strokeLinejoin="miter"
+      aria-hidden="true"
+      style={{ display: "block" }}
+    >
+      <path d="M14 4h6v6" />
+      <path d="M20 4L10 14" />
+      <path d="M19 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h6" />
+    </svg>
   );
 }
 
@@ -242,13 +278,16 @@ function containerStyle(awaitingStart: boolean): CSSProperties {
     zIndex: 100,
     background: "#070d1f",
     display: "flex",
-    // Anchor to the top (instead of vertical-centering) so the bubble +
-    // continue button below the sprite don't leave a big empty band above
-    // the character. The paddingTop sets how much breathing room sits above
-    // the head — small on tiny viewports, comfortable on tall ones.
-    alignItems: "flex-start",
-    justifyContent: "center",
-    paddingTop: "clamp(16px, 4vh, 56px)",
+    flexDirection: "column",
+    alignItems: "center",
+    // header → sprite → footer, evenly distributing the free vertical space
+    // so the three blocks land at roughly the same distance from each other
+    // regardless of viewport height. No layout shift: header is constant,
+    // sprite is constant (bubble is absolute over it), footer has a reserved
+    // min-height so swapping start-hint → continue button doesn't resize it.
+    justifyContent: "space-between",
+    paddingTop: "clamp(12px, 2vh, 28px)",
+    paddingBottom: "clamp(12px, 2vh, 28px)",
     fontFamily: "var(--font-pixel), 'Courier New', monospace",
     imageRendering: "pixelated",
     cursor: awaitingStart ? "pointer" : "default",
@@ -257,12 +296,54 @@ function containerStyle(awaitingStart: boolean): CSSProperties {
   };
 }
 
+// Header — title + npm link icon. Horizontal pill at the top.
+const headerStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: "10px",
+  padding: "6px 10px",
+  color: "#84e6ff",
+  letterSpacing: "0.18em",
+  textTransform: "uppercase",
+  fontSize: "clamp(0.85rem, 2.6vw, 1.1rem)",
+  textShadow: "0 0 24px rgba(132,230,255,0.55), 0 0 48px rgba(132,230,255,0.18)",
+};
+
+const titleStyle: CSSProperties = {
+  whiteSpace: "nowrap",
+};
+
+const npmLinkStyle: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: "26px",
+  height: "26px",
+  color: "rgba(132,230,255,0.75)",
+  border: "2px solid rgba(132,230,255,0.55)",
+  borderRadius: "4px",
+  textDecoration: "none",
+  transition: "color 0.15s ease, border-color 0.15s ease, transform 0.15s ease",
+  cursor: "pointer",
+};
+
+// Footer reserves vertical space so the start-hint → continue-button swap
+// doesn't shrink/grow the footer block — keeps the spacing equilibrated.
+const footerStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minHeight: "clamp(56px, 9vh, 80px)",
+};
+
 // Sprite aspect ratio is 93x255 ≈ 0.365 → natural height = width · 2.74.
-// We size width via vh so the natural height stays in viewport on common
-// aspect ratios (22vh × 2.74 ≈ 60vh tall).
+// Sized via vh so the natural height stays inside the viewport on common
+// aspect ratios. Slightly smaller than the previous 22vh because the
+// header + footer now consume vertical real-estate.
 const spriteWrapStyle: CSSProperties = {
   position: "relative",
-  width: "clamp(140px, 22vh, 260px)",
+  width: "clamp(130px, 20vh, 240px)",
+  flexShrink: 0,
   filter: "drop-shadow(0 0 28px rgba(132,230,255,0.18))",
 };
 
@@ -275,11 +356,13 @@ const spriteImgStyle: CSSProperties = {
 };
 
 // Wrapper — handles absolute positioning + fade-in. Anchored to spriteWrap.
-// top:58% places the bubble's top edge over the lower torso (sprite is
-// 93x255, lower torso ≈ y=148/255 = 58%).
+// top:62% places the bubble's top edge over the waist / lower torso (sprite
+// is 93x255; 62% ≈ y=158/255, just below the printed hoodie area). Slightly
+// lower than the earlier 58% so the bubble's vertical mass sits in the
+// lower half of the character, leaving the face/upper body visible.
 const bubbleWrapStyle: CSSProperties = {
   position: "absolute",
-  top: "58%",
+  top: "62%",
   left: "50%",
   transform: "translateX(-50%)",
   width: "min(560px, 86vw)",
@@ -320,10 +403,6 @@ const caretStyle: CSSProperties = {
 };
 
 const startHintStyle: CSSProperties = {
-  position: "absolute",
-  bottom: "clamp(20px, 4vh, 40px)",
-  left: "50%",
-  transform: "translateX(-50%)",
   margin: 0,
   fontSize: "0.92rem",
   color: "rgba(132,230,255,0.75)",
@@ -331,15 +410,6 @@ const startHintStyle: CSSProperties = {
   textTransform: "uppercase",
   whiteSpace: "nowrap",
   animation: "intro-pulse 1.6s ease-in-out infinite",
-};
-
-const continueWrapStyle: CSSProperties = {
-  position: "absolute",
-  bottom: "clamp(28px, 6vh, 64px)",
-  left: "50%",
-  transform: "translateX(-50%)",
-  zIndex: 3,
-  animation: "intro-fade-in 0.45s ease both",
 };
 
 const continueButtonStyle: CSSProperties = {
@@ -364,6 +434,7 @@ const continueButtonStyle: CSSProperties = {
     "0 0 18px rgba(132,230,255,0.25)",
   ].join(","),
   transition: "transform 0.15s ease",
+  animation: "intro-fade-in 0.45s ease both",
 };
 
 const scanlinesStyle: CSSProperties = {
