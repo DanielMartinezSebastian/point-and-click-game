@@ -1,6 +1,6 @@
 # @pointclick-engine/engine-core
 
-Framework-agnostic core for the Point & Click Game Engine. State, rules, pathfinding, ports — zero React, zero Three.js, zero browser globals.
+Framework-agnostic core for the Point & Click Game Engine. State, rules, pathfinding, i18n, ports — zero React, zero Three.js, zero browser globals.
 
 ## Install
 
@@ -11,7 +11,7 @@ npm install @pointclick-engine/engine-core
 This package alone is **not** a runnable game. Pair it with a renderer:
 
 - [@pointclick-engine/engine-renderer-r3f](https://www.npmjs.com/package/@pointclick-engine/engine-renderer-r3f) — React Three Fiber
-- Or write your own (see [renderer guide](https://github.com/danielmartinezsebastian/2d-game-test/blob/main/docs/architecture/06-renderer-implementation-guide.md))
+- Or write your own (see [renderer guide](https://github.com/DanielMartinezSebastian/pointclick-engine/blob/main/docs/architecture/06-renderer-implementation-guide.md))
 
 ## Quick example
 
@@ -23,14 +23,29 @@ const bus = new EventBus();
 const commands = new CommandHandler();
 
 commands.register("scene:set", (cmd) => {
-  // your scene-loading logic
-  bus.emit("scene:changed", { type: "scene:changed", sceneId: cmd.sceneId, scene: { ... } });
+  bus.emit("scene:changed", { type: "scene:changed", sceneId: cmd.sceneId });
 });
 
 const unsub = bus.on("scene:changed", (ev) => console.log(ev));
 commands.execute({ type: "scene:set", sceneId: "town" });
 // later
 unsub();
+```
+
+### i18n
+
+```ts
+import {
+  registerDictionary,
+  translate,
+  getRandomPhrase,
+} from "@pointclick-engine/engine-core";
+
+registerDictionary("en", { "greeting.hello": ["Hello!", "Hey there!"] });
+registerDictionary("es", { "greeting.hello": ["¡Hola!", "¡Buenas!"] });
+
+translate("greeting.hello", "es");      // "¡Hola!" or "¡Buenas!"
+getRandomPhrase("greeting.hello", "en"); // random pick
 ```
 
 ## Subpath exports
@@ -47,22 +62,35 @@ import { useSceneStore }       from "@pointclick-engine/engine-core/state";
 
 ## What's inside
 
-| Module            | Contents |
-|-------------------|----------|
-| `(root)`          | All of the below re-exported |
-| `/commands`       | `CommandHandler`, `GameCommand` union |
-| `/events`         | `EventBus`, `GameEvent` union, legacy adapter |
-| `/ports`          | `IGameLoopPort`, `IInputPort`, `IViewportPort` (agnostic interfaces) |
-| `/types`          | `GameVec3`, `GameScene`, `GameSceneWall`, etc. |
-| `/state`          | `useSceneStore` (Zustand), `emitRuntimeEvent` |
+| Module        | Key exports |
+|---------------|-------------|
+| `(root)`      | Re-exports all modules below |
+| `/commands`   | `CommandHandler`, `GameCommand` union |
+| `/events`     | `EventBus`, `GameEvent` union |
+| `/ports`      | `IGameLoopPort`, `IInputPort`, `IViewportPort`, `IAudioPort`, `I18nPort` |
+| `/types`      | `GameVec3`, `GameScene`, `GameSceneWall`, `GameSceneInteraction`, `GameSceneTransition`, `PlacedSceneItem`, `ItemDefinition`, `SoundDefinition`, `SceneMusicConfig`, `AudioSettings`, `Locale`, `DialogEntry`, `I18nConfig`, `I18nState` |
+| `/state`      | `useSceneStore`, `createInventorySlotsStore`, `createPlacedItemsStore`, `createAudioSettingsStore`, `createI18nStore` |
+| `(root only)` | `findPath`, `inventoryRules`, `transitionRules`, `audioRules`, `registerDictionary`, `registerDictionaries`, `translate`, `getRandomPhrase`, `matchLocale`, `registerI18nExecutors` |
+
+### Ports
+
+Each port interface has a **headless implementation** included for testing without mocks:
+
+| Interface | Purpose |
+|-----------|---------|
+| `IGameLoopPort` | Frame-tick integration (renderer drives) |
+| `IInputPort` | Keyboard / pointer input |
+| `IViewportPort` | Camera and viewport projection |
+| `IAudioPort` | Sound playback and music |
+| `I18nPort` | Locale detection and persistence |
 
 ## Design principles
 
 - **Framework-agnostic**: no React, no Three.js, no `window`, no `document`
-- **Testable without mocks**: pure functions, injectable ports
+- **Testable without mocks**: pure functions, injectable ports, headless adapters included
 - **Renderer-replaceable**: implement the port interfaces in any renderer
 
-Full architecture: [docs/architecture/01-layers.md](https://github.com/danielmartinezsebastian/2d-game-test/blob/main/docs/architecture/01-layers.md)
+Full architecture: [docs/architecture/01-layers.md](https://github.com/DanielMartinezSebastian/pointclick-engine/blob/main/docs/architecture/01-layers.md)
 
 ## License
 
@@ -70,4 +98,4 @@ MIT © Daniel Martínez Sebastián
 
 ## Status
 
-`v0.1.0` — early stage. API may change in v0.2+.
+`v0.4.0` — active development. Core API is stabilising; i18n system added in v0.4.
