@@ -3,13 +3,12 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useSceneStore } from "@pointclick-engine/engine-core";
 import { resolveTransitionFromItemDrop, resolveTransitionFromItemInteraction } from "@pointclick-engine/engine-core";
-import { SCENES } from "../../../../demo-content/scenes/scenes";
 import { getGameRuntime } from "../publicApi";
 import { useDialogStore } from "../../../store/dialogStore";
 import { usePlacedItemsStore } from "../../../store/placedItemsStore";
 import { getRandomPhrase } from "../../../../demo-content/dialogs/getRandomPhrase";
 import { preloadSceneBackground } from "../../../components/scene/SceneBackgroundPlane";
-import type { RuntimeEvent } from "@pointclick-engine/engine-core";
+import type { RuntimeEvent, GameScene } from "@pointclick-engine/engine-core";
 
 /**
  * Wires scene transitions into the demo.
@@ -21,7 +20,13 @@ import type { RuntimeEvent } from "@pointclick-engine/engine-core";
  * Scene changes are applied directly via sceneStore for demo compatibility
  * (scenes are defined in SCENES, not registered via createGameRuntime).
  */
-export function useTransitionSystem(opts?: { onBeforeChange?: () => void }) {
+export interface UseTransitionSystemOpts {
+  onBeforeChange?: () => void;
+  /** Resuelve el objeto de escena completo por ID. Usado para validación y precarga de fondo. */
+  resolveScene?: (sceneId: string) => GameScene | null;
+}
+
+export function useTransitionSystem(opts?: UseTransitionSystemOpts) {
   const storeSetScene = useSceneStore((s) => s.setScene);
   const placedItems = usePlacedItemsStore((s) => s.items);
   const isTransitioningRef = useRef(false);
@@ -34,11 +39,6 @@ export function useTransitionSystem(opts?: { onBeforeChange?: () => void }) {
   const changeScene = useCallback(
     (targetSceneId: string, transitionId: string) => {
       if (isTransitioningRef.current) return;
-      const scene = SCENES[targetSceneId];
-      if (!scene) {
-        console.warn(`[transition] target scene not found: ${targetSceneId}`);
-        return;
-      }
       isTransitioningRef.current = true;
 
       // Emit transition:started via runtime bus (if runtime is active)
@@ -59,7 +59,8 @@ export function useTransitionSystem(opts?: { onBeforeChange?: () => void }) {
 
       // Change scene first with optional custom spawn position
       const spawnPos = usedTransition && "spawnPosition" in usedTransition ? usedTransition.spawnPosition : undefined;
-      storeSetScene(targetSceneId, scene as Parameters<typeof storeSetScene>[1], spawnPos);
+      const resolvedScene = optsRef.current?.resolveScene?.(targetSceneId) ?? null;
+      storeSetScene(targetSceneId, resolvedScene as Parameters<typeof storeSetScene>[1], spawnPos);
 
       // Then emit walk command in the new scene with correct pathfinding context
       if (usedTransition && "targetPosition" in usedTransition && usedTransition.targetPosition) {
@@ -122,7 +123,7 @@ export function useTransitionSystem(opts?: { onBeforeChange?: () => void }) {
       }
 
       // Preload the target scene background so it's in browser cache when we switch.
-      const targetBg = SCENES[targetSceneId]?.background;
+      const targetBg = optsRef.current?.resolveScene?.(targetSceneId)?.background;
       if (targetBg) preloadSceneBackground(targetBg);
 
       getGameRuntime()?.emit({

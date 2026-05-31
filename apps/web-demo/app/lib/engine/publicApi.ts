@@ -31,9 +31,7 @@ import {
   type GameCommand,
   type SceneMusicConfig,
 } from "@pointclick-engine/engine-core";
-import GameTouchCanvas from "../../components/GameTouchCanvas";
-import { useInventoryStore } from "../../store/inventoryStore";
-import { useDialogStore } from "../../store/dialogStore";
+import { GameCanvasCore } from "@pointclick-engine/engine-renderer-r3f";
 
 // ---------------------------------------------------------------------------
 // Tipos públicos reutilizables (importados o re-exportados de engine-core)
@@ -64,7 +62,15 @@ export type GameSceneConfig = {
   music?: SceneMusicConfig;
 };
 
-export type GameItemDropOutcome = "consume" | "place" | "return";
+export type GameItemDropOutcome =
+  | "consume"
+  | "place"
+  | "return"
+  | "rule-miss"
+  | "unknown-item"
+  | "on-player"
+  | "pickup-blocked"
+  | "pickup-success";
 
 export type GameItemRule = {
   outcome: GameItemDropOutcome;
@@ -75,6 +81,7 @@ export type GameItemRule = {
   placeCollisionHalfSize?: GameVec3;
   pickupSuccessDialogKey?: string;
   pickupBlockedDialogKey?: string;
+  dropSoundUrl?: string;
 };
 
 /** Configuración de ítem registrable via API pública. */
@@ -83,6 +90,8 @@ export type GameItemConfig = {
   name: string;
   spriteUrl: string;
   descriptionDialogKey?: string;
+  pickupSoundUrl?: string;
+  dropSoundUrl?: string;
   interactionRules: Record<string, GameItemRule>;
   defaultRule: GameItemRule;
 };
@@ -173,10 +182,26 @@ function toGameState(state: SceneStoreSnapshot): GameState {
 // Configuración de createGameRuntime
 // ---------------------------------------------------------------------------
 
+/** Adapter para conectar el engine con la UI de inventario del host. */
+export interface InventoryUIAdapter {
+  toggle(): void;
+  isOpen(): boolean;
+}
+
+/** Adapter para conectar el engine con el sistema de diálogos del host. */
+export interface DialogUIAdapter {
+  show(text: string, dialogKey?: string): void;
+  hide(): void;
+}
+
 export type GameRuntimeConfig = {
   scenes?: GameSceneConfig[];
   items?: GameItemConfig[];
   rules?: GameRuleConfig[];
+  /** Adapter de UI para inventory. Si no se pasa, inventory:toggle es no-op. */
+  inventoryAdapter?: InventoryUIAdapter;
+  /** Adapter de UI para diálogos. Si no se pasa, dialog:trigger es no-op. */
+  dialogAdapter?: DialogUIAdapter;
 };
 
 // ---------------------------------------------------------------------------
@@ -352,8 +377,11 @@ export function createGameRuntime(config: GameRuntimeConfig = {}): GameRuntime {
   // ---------------------------------------------------------------------------
 
   commands.register("inventory:toggle", () => {
-    useInventoryStore.getState().toggle();
+    config.inventoryAdapter?.toggle();
   });
+
+  // Track the active dialog key so dialog:dismiss can include it in the event
+  let _activeDialogKey: string | undefined;
 
   commands.register("dialog:trigger", (cmd) => {
     const entry = _ruleRegistry.get(cmd.dialogKey);
@@ -362,7 +390,8 @@ export function createGameRuntime(config: GameRuntimeConfig = {}): GameRuntime {
       phrases.length > 0
         ? phrases[Math.floor(Math.random() * phrases.length)]!
         : cmd.dialogKey;
-    useDialogStore.getState().show(text, cmd.dialogKey);
+    _activeDialogKey = cmd.dialogKey;
+    config.dialogAdapter?.show(text, cmd.dialogKey);
     bus.emit("dialog:triggered", {
       type: "dialog:triggered",
       text,
@@ -372,8 +401,9 @@ export function createGameRuntime(config: GameRuntimeConfig = {}): GameRuntime {
   });
 
   commands.register("dialog:dismiss", () => {
-    const { key } = useDialogStore.getState();
-    useDialogStore.getState().dismiss();
+    const key = _activeDialogKey;
+    _activeDialogKey = undefined;
+    config.dialogAdapter?.hide();
     bus.emit("dialog:dismissed", {
       type: "dialog:dismissed",
       dialogKey: key,
@@ -539,7 +569,7 @@ export function useGameActions(): GameActions {
 
 /** Integración pública de viewport/canvas para consumir el runtime. */
 export function GameViewport({ debug, onRuntimeEvent }: GameViewportProps) {
-  return createElement(GameTouchCanvas as ComponentType<GameViewportProps>, {
+  return createElement(GameCanvasCore as ComponentType<GameViewportProps>, {
     debug,
     onRuntimeEvent,
   });

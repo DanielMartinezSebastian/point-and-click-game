@@ -31,18 +31,25 @@ function emit(event: GameEvent): void {
 
 const SHOULD_LOG_STATE_TRANSITIONS = process.env.NODE_ENV !== "production";
 
+type SceneStoreLogger = (event: string, payload: Record<string, unknown>) => void;
+let _logger: SceneStoreLogger | null = null;
+
+/**
+ * Inyecta un logger custom para debug de scene-store (p.ej. window.__gameTrace en browser).
+ * Si no se llama, el store usa console.info en desarrollo.
+ * Pasar null para deshabilitar el logger completamente.
+ */
+export function setSceneStoreLogger(logger: SceneStoreLogger | null): void {
+  _logger = logger;
+}
+
 function logSceneStore(event: string, payload: Record<string, unknown>) {
   if (!SHOULD_LOG_STATE_TRANSITIONS) return;
-  if (typeof window !== "undefined") {
-    const nextEntry = { scope: "scene-store", event, payload, ts: Date.now() };
-    const currentTrace =
-      (window as unknown as { __gameTrace?: unknown[] }).__gameTrace ?? [];
-    (window as unknown as { __gameTrace: unknown[] }).__gameTrace = [
-      ...currentTrace,
-      nextEntry,
-    ].slice(-300);
+  if (_logger) {
+    _logger(event, payload);
+  } else {
+    console.info(`[scene-store] ${event}`, payload);
   }
-  console.info(`[scene-store] ${event}`, payload);
 }
 
 function cloneWall(wall: GameSceneWall): GameSceneWall {

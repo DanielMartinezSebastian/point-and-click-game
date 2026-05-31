@@ -9,26 +9,26 @@
 
 ## Sprint 1 — Core agnosticism (sin riesgo de romper demo)
 
-- [ ] [12.1 — Core: eliminar window.__gameTrace, LogPort opcional](tasks/01-remove-window-trace-scenestore.md)
-- [ ] [12.2 — publicApi: completar tipos audio (GameItemRule, GameItemConfig, GameItemDropOutcome)](tasks/02-fix-publicapi-type-gaps.md)
+- [x] [12.1 — Core: eliminar window.__gameTrace, LogPort opcional](tasks/01-remove-window-trace-scenestore.md)
+- [x] [12.2 — publicApi: completar tipos audio (GameItemRule, GameItemConfig, GameItemDropOutcome)](tasks/02-fix-publicapi-type-gaps.md)
 
 ## Sprint 2 — Desacoplar demo de hooks del engine
 
-- [ ] [12.3 — useTransitionSystem: eliminar import SCENES, aceptar getSceneBackground callback](tasks/03-decouple-transition-system-from-scenes.md)
-- [ ] [12.4 — publicApi: eliminar imports de demo stores, DI para inventory + dialog](tasks/04-remove-demo-store-imports-from-publicapi.md)
+- [x] [12.3 — useTransitionSystem: eliminar import SCENES, aceptar resolveScene callback](tasks/03-decouple-transition-system-from-scenes.md)
+- [x] [12.4 — publicApi: eliminar imports de demo stores, DI para inventory + dialog](tasks/04-remove-demo-store-imports-from-publicapi.md)
 
 ## Sprint 3 — Extraer hooks genéricos al renderer
 
-- [ ] [12.5 — engine-renderer-r3f: mover useClickToMoveController](tasks/05-extract-click-to-move-to-renderer.md)
-- [ ] [12.6 — engine-renderer-r3f: mover useKeyboardMovementInput](tasks/06-extract-keyboard-input-to-renderer.md)
+- [x] [12.5 — engine-renderer-r3f: mover useClickToMoveController](tasks/05-extract-click-to-move-to-renderer.md)
+- [x] [12.6 — engine-renderer-r3f: mover useKeyboardMovementInput](tasks/06-extract-keyboard-input-to-renderer.md)
 
 ## Sprint 4 — Separar GameViewport de GameTouchCanvas
 
-- [ ] [12.7 — engine-renderer-r3f: extraer GameCanvasCore; publicApi no importa demo](tasks/07-split-gameviewport-gamecanvascore.md)
+- [x] [12.7 — engine-renderer-r3f: extraer GameCanvasCore; publicApi no importa demo](tasks/07-split-gameviewport-gamecanvascore.md)
 
 ## Sprint 5 — Tests de consolidación
 
-- [ ] [12.8 — Tests: LogPort, transitionSystem, hooks renderer, publicApi DI contract](tasks/08-tests-consolidation.md)
+- [x] [12.8 — Tests: LogPort, transitionSystem, hooks renderer, publicApi DI contract](tasks/08-tests-consolidation.md)
 
 ---
 
