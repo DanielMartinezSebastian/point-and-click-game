@@ -9,6 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] — 2026-05-31
 
+This release folds in everything between v0.1.x and v0.4.0 (phases 6, 8, 9,
+10, 11, 12, 13). Pure additions — no breaking changes for the public surface.
+
+### Added — Wall renderer with openings (Phase 6)
+
+- `SceneWalls` now renders true 3D wall segments with visible cuts at
+  each opening; sensible default opening positions and editor support.
+
+### Added — Scene transition renderer (Phase 8)
+
+- `SceneTransitions` component handles collision-zone detection and
+  triggers transitions via the core handlers (cached empty-transitions
+  array prevents infinite loops).
+
+### Added — Player walk animation (Phase 10)
+
+- `usePlayerWalkAnimation` hook reacts to `player:walkTo` / walk
+  events from core and drives sprite movement; input is blocked during
+  the walk and animation runs on entry-position arrivals.
+
+### Added — Audio system R3F bridge (Phase 11)
+
+- `useAudioSystem` hook wires `GameEvent`s to an `AudioPort` adapter
+  (default = web), syncs mute / volume state, and applies persisted
+  settings on load.
+
+### Changed — Architecture cleanup (Phase 12)
+
+- Renderer no longer leaks into core; pulled debug logs; `GameCanvasCore`
+  added as the headless variant for hosts that supply their own Canvas.
+
 ### Added — i18n React surface (Phase 13)
 
 - `useI18n()` → `{ locale, availableLocales, setLocale, t, getPhrase }`.

@@ -9,6 +9,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] — 2026-05-31
 
+This release folds in everything between v0.1.x and v0.4.0 (phases 6, 8, 9,
+10, 11, 12, 13). Pure additions — no breaking changes for the public surface.
+
+### Added — Walls with openings (Phase 6)
+
+- Wall type extended with `openings: { start, end }[]`; pathfinding respects
+  the gaps and produces traversable holes through wall segments.
+
+### Added — Scene transitions as first-class primitives (Phase 8)
+
+- `GameSceneTransition` union with three variants: `kind: "onCollide"`,
+  `kind: "onItemDrop"`, `kind: "onItemInteraction"`.
+- Helpers `canTransitionBeTriggered`, `resolveTransitionFromItemDrop`,
+  and a transition state slice on `sceneStore` (`setScene` clones
+  transitions, `updateTransition` / `addTransition` / `removeTransition`).
+- Commands and events for scene change requests + transition triggers.
+
+### Added — Placed items in core (Phase 9)
+
+- Agnostic `placedItemsStore` + dialog keys so renderers can drop items
+  into a scene and pick them back up without owning the data model.
+- Unified placed-item types between authoring (scene config) and runtime.
+
+### Added — Scene entry positions + player walk lifecycle (Phase 10)
+
+- Scene transitions carry `entryPosition` (spawn + target) so cross-scene
+  arrivals can animate the player into place.
+- New `player:walkTo` command, `playerWalkingState` slice, and
+  `player:walkStarted` / `player:walkEnded` events for renderer-side
+  pathwalk animations.
+- Position validation utilities for `GameVec3`.
+
+### Added — Audio system (Phase 11)
+
+- Types: `SoundDefinition`, `SceneMusicConfig`, `AudioSettings`.
+- `AudioPort` interface + `HeadlessAudioAdapter` for tests / SSR.
+- `audioSettingsStore` with persistence helpers (mute, volumes).
+- `audioRules` processor that translates `GameEvent`s (pickup, drop,
+  scene change, dialog) into audio commands.
+- New commands and events in the audio namespace.
+
+### Changed — Architecture cleanup (Phase 12)
+
+- Stricter core agnosticism: no `window` / `document` references, no
+  framework imports from `engine-core`. Library boundaries verified by
+  `sceneStoreAgnosticism` tests.
+
 ### Added — i18n / Localization System (Phase 13)
 
 - Core types: `Locale` (BCP-47 string), `DialogEntry`, `DialogDictionary`,
