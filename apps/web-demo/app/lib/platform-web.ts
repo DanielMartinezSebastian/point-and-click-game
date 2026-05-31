@@ -369,3 +369,15 @@ export {
   WebAudioAdapter,
   bindAudioPersistence,
 } from "./platform-web-audio";
+
+// ---------------------------------------------------------------------------
+// i18n adapter (re-export desde platform-web-i18n)
+// ---------------------------------------------------------------------------
+
+export {
+  WebI18nAdapter,
+  createWebI18nAdapter,
+  bindI18nPersistence,
+  DEFAULT_I18N_STORAGE_KEY,
+  type WebI18nAdapterOptions,
+} from "./platform-web-i18n";

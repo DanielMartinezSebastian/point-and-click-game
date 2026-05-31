@@ -155,8 +155,10 @@ export function GameTouchSpriteRuntime({
    */
   addWallWithData?: (wall: GameSceneWall) => void;
   /**
-   * DI: Returns a random phrase for a given key.
-   * Inject `getRandomPhrase` from demo content for boundary hit messages.
+   * @deprecated Pre-i18n DI. The runtime never reads this prop today — the
+   * host computes the phrase from the `onCollide` runtime event using the
+   * engine i18n store (`getRandomPhrase` from `@pointclick-engine/engine-core`
+   * or the `useI18n` hook). Kept as an optional no-op for backward compat.
    */
   getPhrase?: (key: string) => string;
   /**
