@@ -69,6 +69,7 @@ export function IntroScene({ onComplete }: IntroSceneProps) {
   // the typewriter effect resume from the current position instead of restarting
   // from 0 and visibly rewinding the text.
   const indexRef = useRef(0);
+  const skipTypingRef = useRef<(() => void) | null>(null);
 
   // Capture the intro text at the moment the user clicks to start — so if the
   // locale changes mid-intro (unlikely, but possible) the typewriter doesn't
@@ -86,6 +87,10 @@ export function IntroScene({ onComplete }: IntroSceneProps) {
     playClickSound();
     setStarted(true);
   }, [started]);
+
+  const handleSkip = useCallback(() => {
+    skipTypingRef.current?.();
+  }, []);
 
   // Typewriter ──────────────────────────────────────────────────────────────
   // Char-by-char reveal with a small extra pause at sentence boundaries.
@@ -110,6 +115,7 @@ export function IntroScene({ onComplete }: IntroSceneProps) {
       }
 
       if (i >= introText.length) {
+        skipTypingRef.current = null;
         setTypingDone(true);
         return;
       }
@@ -124,11 +130,21 @@ export function IntroScene({ onComplete }: IntroSceneProps) {
       return;
     }
 
+    skipTypingRef.current = () => {
+      cancelled = true;
+      if (timer !== null) clearTimeout(timer);
+      indexRef.current = introText.length;
+      setDisplayedText(introText);
+      setTypingDone(true);
+      skipTypingRef.current = null;
+    };
+
     timer = setTimeout(tick, baseStepMs);
 
     return () => {
       cancelled = true;
       if (timer !== null) clearTimeout(timer);
+      skipTypingRef.current = null;
     };
   }, [started]);
 
@@ -172,8 +188,8 @@ export function IntroScene({ onComplete }: IntroSceneProps) {
 
   return (
     <div
-      onPointerDown={!started ? handleStart : undefined}
-      style={containerStyle(!started)}
+      onPointerDown={!started ? handleStart : (!typingDone ? handleSkip : undefined)}
+      style={containerStyle(!started || !typingDone)}
       aria-label={t("intro.aria-label")}
     >
       {/* Header — título, enlace npm y crédito de autoría. */}

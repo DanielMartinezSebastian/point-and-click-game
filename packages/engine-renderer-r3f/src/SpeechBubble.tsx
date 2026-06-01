@@ -80,6 +80,7 @@ export default function SpeechBubble({
   const normalizedText = useMemo(() => text.trim(), [text]);
   const [displayedText, setDisplayedText] = useState("");
   const dismissTimerRef = useRef<ReturnType<typeof globalThis.setTimeout> | null>(null);
+  const skipTypingRef = useRef<(() => void) | null>(null);
 
   // ── Layout estático: calculado UNA vez por diálogo (dep: normalizedText) ──
   const { bubbleWidth, textMaxWidth, fullBubbleHeight, wrappedText } = useMemo(() => {
@@ -119,8 +120,27 @@ export default function SpeechBubble({
     let charsSinceLastSound = 0;
     const msPerChar = Math.max(14, Math.floor(1000 / Math.max(1, charsPerSecond)));
     const charsPerSound = Math.max(1, Math.round(charsPerSecond / 8));
+    const timerHolder: { current: ReturnType<typeof globalThis.setInterval> | null } = { current: null };
 
-    const timer = globalThis.setInterval(() => {
+    const startDismissTimer = () => {
+      if (onDismiss) {
+        const wordCount = normalizedText.trim().split(/\s+/).filter(Boolean).length;
+        const readMs = clamp(wordCount * MS_PER_WORD_READ, MIN_READ_MS, MAX_READ_MS);
+        dismissTimerRef.current = globalThis.setTimeout(onDismiss, readMs);
+      }
+    };
+
+    skipTypingRef.current = () => {
+      if (timerHolder.current !== null) {
+        globalThis.clearInterval(timerHolder.current);
+        timerHolder.current = null;
+      }
+      setDisplayedText(wrappedText);
+      skipTypingRef.current = null;
+      startDismissTimer();
+    };
+
+    timerHolder.current = globalThis.setInterval(() => {
       index += 1;
       const newChar = wrappedText[index - 1];
       setDisplayedText(wrappedText.slice(0, index));
@@ -134,18 +154,19 @@ export default function SpeechBubble({
       }
 
       if (index >= wrappedText.length) {
-        globalThis.clearInterval(timer);
-
-        if (onDismiss) {
-          const wordCount = normalizedText.trim().split(/\s+/).filter(Boolean).length;
-          const readMs = clamp(wordCount * MS_PER_WORD_READ, MIN_READ_MS, MAX_READ_MS);
-          dismissTimerRef.current = globalThis.setTimeout(onDismiss, readMs);
-        }
+        globalThis.clearInterval(timerHolder.current!);
+        timerHolder.current = null;
+        skipTypingRef.current = null;
+        startDismissTimer();
       }
     }, msPerChar);
 
     return () => {
-      globalThis.clearInterval(timer);
+      if (timerHolder.current !== null) {
+        globalThis.clearInterval(timerHolder.current);
+        timerHolder.current = null;
+      }
+      skipTypingRef.current = null;
       if (dismissTimerRef.current !== null) {
         globalThis.clearTimeout(dismissTimerRef.current);
         dismissTimerRef.current = null;
@@ -227,7 +248,14 @@ export default function SpeechBubble({
   const arrowRotationZ = shouldShowLeft ? -Math.PI / 2 : Math.PI / 2;
 
   return (
-    <group ref={bubbleGroupRef} position={[0, offsetY, 0]}>
+    <group
+      ref={bubbleGroupRef}
+      position={[0, offsetY, 0]}
+      onPointerDown={(e) => {
+        e.stopPropagation();
+        skipTypingRef.current?.();
+      }}
+    >
       <group position={[bubbleCenterX, -bubbleHeight / 2, 0.03]}>
         <RoundedBox
           args={[1, 1, 0.02]}

@@ -56,6 +56,7 @@ export default function SpeechBubble({ text, visible, trigger, charsPerSecond = 
     const normalizedText = useMemo(() => text.trim(), [text]);
     const [displayedText, setDisplayedText] = useState("");
     const dismissTimerRef = useRef(null);
+    const skipTypingRef = useRef(null);
     // ── Layout estático: calculado UNA vez por diálogo (dep: normalizedText) ──
     const { bubbleWidth, textMaxWidth, fullBubbleHeight, wrappedText } = useMemo(() => {
         const fullText = normalizedText.length > 0 ? normalizedText : " ";
@@ -83,7 +84,24 @@ export default function SpeechBubble({ text, visible, trigger, charsPerSecond = 
         let charsSinceLastSound = 0;
         const msPerChar = Math.max(14, Math.floor(1000 / Math.max(1, charsPerSecond)));
         const charsPerSound = Math.max(1, Math.round(charsPerSecond / 8));
-        const timer = globalThis.setInterval(() => {
+        const timerHolder = { current: null };
+        const startDismissTimer = () => {
+            if (onDismiss) {
+                const wordCount = normalizedText.trim().split(/\s+/).filter(Boolean).length;
+                const readMs = clamp(wordCount * MS_PER_WORD_READ, MIN_READ_MS, MAX_READ_MS);
+                dismissTimerRef.current = globalThis.setTimeout(onDismiss, readMs);
+            }
+        };
+        skipTypingRef.current = () => {
+            if (timerHolder.current !== null) {
+                globalThis.clearInterval(timerHolder.current);
+                timerHolder.current = null;
+            }
+            setDisplayedText(wrappedText);
+            skipTypingRef.current = null;
+            startDismissTimer();
+        };
+        timerHolder.current = globalThis.setInterval(() => {
             index += 1;
             const newChar = wrappedText[index - 1];
             setDisplayedText(wrappedText.slice(0, index));
@@ -95,16 +113,18 @@ export default function SpeechBubble({ text, visible, trigger, charsPerSecond = 
                 }
             }
             if (index >= wrappedText.length) {
-                globalThis.clearInterval(timer);
-                if (onDismiss) {
-                    const wordCount = normalizedText.trim().split(/\s+/).filter(Boolean).length;
-                    const readMs = clamp(wordCount * MS_PER_WORD_READ, MIN_READ_MS, MAX_READ_MS);
-                    dismissTimerRef.current = globalThis.setTimeout(onDismiss, readMs);
-                }
+                globalThis.clearInterval(timerHolder.current);
+                timerHolder.current = null;
+                skipTypingRef.current = null;
+                startDismissTimer();
             }
         }, msPerChar);
         return () => {
-            globalThis.clearInterval(timer);
+            if (timerHolder.current !== null) {
+                globalThis.clearInterval(timerHolder.current);
+                timerHolder.current = null;
+            }
+            skipTypingRef.current = null;
             if (dismissTimerRef.current !== null) {
                 globalThis.clearTimeout(dismissTimerRef.current);
                 dismissTimerRef.current = null;
@@ -181,6 +201,9 @@ export default function SpeechBubble({ text, visible, trigger, charsPerSecond = 
         : offsetX + bubbleWidth / 2;
     const arrowBaseX = shouldShowLeft ? offsetX + 0.07 : offsetX - 0.07;
     const arrowRotationZ = shouldShowLeft ? -Math.PI / 2 : Math.PI / 2;
-    return (_jsxs("group", { ref: bubbleGroupRef, position: [0, offsetY, 0], children: [_jsxs("group", { position: [bubbleCenterX, -bubbleHeight / 2, 0.03], children: [_jsx(RoundedBox, { args: [1, 1, 0.02], scale: [bubbleWidth + BORDER_PADDING, bubbleHeight + BORDER_PADDING, 1], radius: 0.14, smoothness: 4, position: [0, 0, -0.003], renderOrder: BUBBLE_RENDER_ORDER, children: _jsx("meshBasicMaterial", { color: "#ffffff", toneMapped: false, depthTest: false }) }), _jsx(RoundedBox, { args: [1, 1, 0.018], scale: [bubbleWidth, bubbleHeight, 1], radius: 0.12, smoothness: 4, position: [0, 0, 0], renderOrder: BUBBLE_RENDER_ORDER + 1, children: _jsx("meshBasicMaterial", { color: "#ffffff", toneMapped: false, depthTest: false }) }), _jsx(Text, { position: [-(bubbleWidth / 2) + TEXT_PADDING_X, 0, 0.012], color: "#121212", anchorX: "left", anchorY: "middle", maxWidth: textMaxWidth, lineHeight: LINE_HEIGHT, fontSize: FONT_SIZE, textAlign: "left", outlineWidth: 0.005, outlineColor: "#ffffff", renderOrder: BUBBLE_RENDER_ORDER + 2, "material-depthTest": false, children: displayedText })] }), _jsxs("mesh", { position: [arrowBaseX, -fullBubbleHeight * 0.3, 0.027], rotation: [0, 0, arrowRotationZ], renderOrder: BUBBLE_RENDER_ORDER, children: [_jsx("coneGeometry", { args: [0.16, 0.27, 3] }), _jsx("meshBasicMaterial", { color: "#ffffff", toneMapped: false, depthTest: false })] }), _jsxs("mesh", { position: [arrowBaseX, -fullBubbleHeight * 0.3, 0.028], rotation: [0, 0, arrowRotationZ], renderOrder: BUBBLE_RENDER_ORDER + 1, children: [_jsx("coneGeometry", { args: [0.13, 0.22, 3] }), _jsx("meshBasicMaterial", { color: "#ffffff", toneMapped: false, depthTest: false })] })] }));
+    return (_jsxs("group", { ref: bubbleGroupRef, position: [0, offsetY, 0], onPointerDown: (e) => {
+            e.stopPropagation();
+            skipTypingRef.current?.();
+        }, children: [_jsxs("group", { position: [bubbleCenterX, -bubbleHeight / 2, 0.03], children: [_jsx(RoundedBox, { args: [1, 1, 0.02], scale: [bubbleWidth + BORDER_PADDING, bubbleHeight + BORDER_PADDING, 1], radius: 0.14, smoothness: 4, position: [0, 0, -0.003], renderOrder: BUBBLE_RENDER_ORDER, children: _jsx("meshBasicMaterial", { color: "#ffffff", toneMapped: false, depthTest: false }) }), _jsx(RoundedBox, { args: [1, 1, 0.018], scale: [bubbleWidth, bubbleHeight, 1], radius: 0.12, smoothness: 4, position: [0, 0, 0], renderOrder: BUBBLE_RENDER_ORDER + 1, children: _jsx("meshBasicMaterial", { color: "#ffffff", toneMapped: false, depthTest: false }) }), _jsx(Text, { position: [-(bubbleWidth / 2) + TEXT_PADDING_X, 0, 0.012], color: "#121212", anchorX: "left", anchorY: "middle", maxWidth: textMaxWidth, lineHeight: LINE_HEIGHT, fontSize: FONT_SIZE, textAlign: "left", outlineWidth: 0.005, outlineColor: "#ffffff", renderOrder: BUBBLE_RENDER_ORDER + 2, "material-depthTest": false, children: displayedText })] }), _jsxs("mesh", { position: [arrowBaseX, -fullBubbleHeight * 0.3, 0.027], rotation: [0, 0, arrowRotationZ], renderOrder: BUBBLE_RENDER_ORDER, children: [_jsx("coneGeometry", { args: [0.16, 0.27, 3] }), _jsx("meshBasicMaterial", { color: "#ffffff", toneMapped: false, depthTest: false })] }), _jsxs("mesh", { position: [arrowBaseX, -fullBubbleHeight * 0.3, 0.028], rotation: [0, 0, arrowRotationZ], renderOrder: BUBBLE_RENDER_ORDER + 1, children: [_jsx("coneGeometry", { args: [0.13, 0.22, 3] }), _jsx("meshBasicMaterial", { color: "#ffffff", toneMapped: false, depthTest: false })] })] }));
 }
 //# sourceMappingURL=SpeechBubble.js.map
