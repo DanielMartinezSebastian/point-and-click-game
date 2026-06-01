@@ -7,22 +7,10 @@ interface UsePlayerWalkAnimationResult {
     /** Progress 0-1 */
     progress: number;
 }
-/**
- * Hook that smoothly animates player walking along a calculated path.
- *
- * - Interpolates position via useFrame
- * - Detects collisions and aborts if blocked
- * - Allows manual cancellation on user input
- * - Returns animated position for rendering
- *
- * Usage:
- * ```
- * const { animatedPosition, isWalking } = usePlayerWalkAnimation(
- *   playerPosition,
- *   walkingState
- * );
- * ```
- */
 export declare function usePlayerWalkAnimation(playerPosition: GameVec3, walkingState: PlayerWalkingState | null, onWalkAbort?: (reason: "user-input" | "collision" | "unreachable") => void, onWalkComplete?: () => void): UsePlayerWalkAnimationResult;
+/** Returns cumulative straight-line distances for each point in the path, starting at 0. */
+export declare function buildCumulativeDistances(pathPoints: GameVec3[]): number[];
+/** Samples a world position along the path at normalized progress in [0, 1]. */
+export declare function samplePathPosition(pathPoints: GameVec3[], distances: number[], total: number, progress: number): GameVec3;
 export {};
 //# sourceMappingURL=usePlayerWalkAnimation.d.ts.map

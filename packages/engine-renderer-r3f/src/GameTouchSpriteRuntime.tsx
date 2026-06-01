@@ -235,21 +235,24 @@ export function GameTouchSpriteRuntime({
   const playerWalkingStateRef = useRef(playerWalkingState);
   useEffect(() => { playerWalkingStateRef.current = playerWalkingState; }, [playerWalkingState]);
 
-  // When the walk animation completes, teleport the physics body to the target
-  // so the sprite doesn't snap back to its original position.
+  // When the walk animation completes, teleport the physics body to where the
+  // animation actually ended (the last path point) so the sprite doesn't snap
+  // back to its original position. The animation follows `pathPoints`, whose
+  // last entry is the reachable endpoint — which may be a partial route's stop
+  // short of an unreachable target, so prefer it over `targetPosition`.
   const handleWalkComplete = useCallback(() => {
-    const target = playerWalkingStateRef.current?.targetPosition;
+    const ws = playerWalkingStateRef.current;
     const body = characterBodyRef.current;
-    if (target && body) {
-      body.setTranslation({ x: target[0], y: target[1], z: target[2] }, true);
-    }
+    if (!ws || !body) return;
+    const end = ws.pathPoints[ws.pathPoints.length - 1] ?? ws.targetPosition;
+    body.setTranslation({ x: end[0], y: end[1], z: end[2] }, true);
   }, []);
 
   // Use walk animation if active, otherwise use current player position
   const { animatedPosition, isWalking } = usePlayerWalkAnimation(playerPosition, playerWalkingState, undefined, handleWalkComplete);
   const renderPosition = isWalking ? animatedPosition : playerPosition;
 
-  const { setTarget, setRoute, cancelTarget, resolveDirection, registerProgress } = useClickToMoveController();
+  const { setRoute, cancelTarget, resolveDirection, registerProgress } = useClickToMoveController();
   const { clearPressedKeys, getKeyboardMovement } = useKeyboardMovementInput();
 
   const playableBounds = useMemo(() => {
@@ -344,41 +347,24 @@ export function GameTouchSpriteRuntime({
     );
     const effectiveGoal = redirected ?? clickGoal;
 
-    const pathArgs = {
+    // findPath returns a route to the goal, or — when the goal is unreachable —
+    // a partial route toward the closest reachable point (so the character
+    // always makes progress and never freezes against an obstacle). It only
+    // returns null when the player is truly trapped with nowhere to move.
+    const route = findPath({
+      start: { x: startPosition.x, z: startPosition.z },
+      goal: effectiveGoal,
       bounds: playableBounds,
       walls: scene.walls,
       interactions: scene.interactions,
-    };
-    const startPt = { x: startPosition.x, z: startPosition.z };
-
-    const route = findPath({ start: startPt, goal: effectiveGoal, ...pathArgs });
+    });
 
     if (route && route.length > 0) {
       setRoute(route);
       return;
     }
 
-    // Path blocked: nudge the goal toward the player in cellSize steps and try
-    // again. This navigates the character as close as possible to the clicked
-    // point without walking through obstacles.
-    const dx = startPt.x - effectiveGoal.x;
-    const dz = startPt.z - effectiveGoal.z;
-    const dist = Math.hypot(dx, dz);
-    if (dist > 0) {
-      const STEP = 0.9; // ≈ pathfinding cellSize
-      const maxSteps = Math.min(8, Math.floor(dist / STEP));
-      for (let step = 1; step <= maxSteps; step++) {
-        const t = (step * STEP) / dist;
-        const nudgedGoal = { x: effectiveGoal.x + dx * t, z: effectiveGoal.z + dz * t };
-        const fallback = findPath({ start: startPt, goal: nudgedGoal, ...pathArgs });
-        if (fallback && fallback.length > 0) {
-          setRoute(fallback);
-          return;
-        }
-      }
-    }
-
-    // Truly unreachable — notify the host so it can react (e.g. play a blocked sfx).
+    // Truly trapped — notify the host so it can react (e.g. play a blocked sfx).
     emitRuntimeEvent(onRuntimeEvent, {
       type: "onCollide",
       reason: "pathblocked",

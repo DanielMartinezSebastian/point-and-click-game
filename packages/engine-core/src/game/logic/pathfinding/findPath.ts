@@ -45,12 +45,22 @@ type FindPathOptions = {
   obstaclePadding?: number;
   segmentSampleStep?: number;
   maxIterations?: number;
+  /**
+   * When the goal is unreachable, return a partial route to the open cell
+   * closest to the goal instead of `null`. Default true — this keeps the
+   * character moving toward the destination instead of freezing in place.
+   */
+  allowPartialPath?: boolean;
 };
 
-const DEFAULT_CELL_SIZE = 0.9;
-const DEFAULT_OBSTACLE_PADDING = 0.72;
-const DEFAULT_SEGMENT_SAMPLE_STEP = 0.35;
-const DEFAULT_MAX_ITERATIONS = 5000;
+// Finer than the historical 0.9 so narrow passages between walls are
+// represented by at least one open cell and A* can route through them.
+const DEFAULT_CELL_SIZE = 0.5;
+// Clearance kept between the path and obstacles. The player collider is
+// ~0.55 wide in X, so 0.6 clears it with a small margin while still leaving
+// real doorways/gaps navigable (a gap needs to be > 2*padding = 1.2 wide).
+const DEFAULT_OBSTACLE_PADDING = 0.6;
+const DEFAULT_SEGMENT_SAMPLE_STEP = 0.25;
 const NEIGHBOR_OFFSETS = [
   [-1, -1],
   [-1, 0],
@@ -71,7 +81,8 @@ export function findPath({
   cellSize = DEFAULT_CELL_SIZE,
   obstaclePadding = DEFAULT_OBSTACLE_PADDING,
   segmentSampleStep = DEFAULT_SEGMENT_SAMPLE_STEP,
-  maxIterations = DEFAULT_MAX_ITERATIONS,
+  maxIterations,
+  allowPartialPath = true,
 }: FindPathOptions): MovementPoint[] | null {
   const obstacles = [
     ...walls.map((wall) =>
@@ -118,8 +129,13 @@ export function findPath({
     1,
     Math.floor((bounds.maxZ - bounds.minZ) / cellSize) + 1,
   );
+  const cellCount = width * height;
 
-  const blocked = new Array<boolean>(width * height);
+  // Generous default: each cell is expanded at most once, so the whole grid
+  // can be explored. Callers can still cap it explicitly.
+  const iterationCap = maxIterations ?? cellCount * 4;
+
+  const blocked = new Uint8Array(cellCount);
   for (let gridZ = 0; gridZ < height; gridZ += 1) {
     for (let gridX = 0; gridX < width; gridX += 1) {
       const point = gridToPoint(gridX, gridZ, bounds, cellSize);
@@ -128,7 +144,9 @@ export function findPath({
         bounds,
         obstacles,
         obstaclePadding,
-      );
+      )
+        ? 1
+        : 0;
     }
   }
 
@@ -151,46 +169,56 @@ export function findPath({
 
   const startIndex = gridIndex(startCell.x, startCell.z, width);
   const goalIndex = gridIndex(goalCell.x, goalCell.z, width);
-  const gScore = new Array<number>(width * height).fill(
-    Number.POSITIVE_INFINITY,
-  );
-  const fScore = new Array<number>(width * height).fill(
-    Number.POSITIVE_INFINITY,
-  );
-  const openSet = new Set<number>([startIndex]);
-  const cameFrom = new Map<number, number>();
+
+  if (startIndex === goalIndex) {
+    // Start and goal collapse to the same cell but the direct segment was
+    // blocked (thin obstacle between them) — just steer toward the goal.
+    return [goal];
+  }
+
+  const gScore = new Float64Array(cellCount).fill(Number.POSITIVE_INFINITY);
+  const cameFrom = new Int32Array(cellCount).fill(-1);
+  const closed = new Uint8Array(cellCount);
+  const open = new MinHeap();
 
   gScore[startIndex] = 0;
-  fScore[startIndex] = heuristic(startCell, goalCell);
+  open.push(startIndex, heuristic(startCell, goalCell));
+
+  // Track the open cell closest to the goal so we can return a partial route
+  // when the goal sits in a different connected region.
+  let bestIndex = startIndex;
+  let bestHeuristic = heuristic(startCell, goalCell);
 
   let iterations = 0;
-  while (openSet.size > 0 && iterations < maxIterations) {
+  while (open.size > 0 && iterations < iterationCap) {
     iterations += 1;
-    const currentIndex = findLowestScore(openSet, fScore);
-    if (currentIndex == null) {
-      break;
+    const currentIndex = open.pop();
+    if (currentIndex < 0 || closed[currentIndex]) {
+      continue;
     }
+    closed[currentIndex] = 1;
 
     if (currentIndex === goalIndex) {
-      const gridPath = reconstructPath(cameFrom, currentIndex, width);
-      const rawPoints = [
-        start,
-        ...gridPath.map((cell) =>
-          gridToPoint(cell.x, cell.z, bounds, cellSize),
-        ),
-        goal,
-      ];
-      return smoothPath(
-        rawPoints,
+      return buildRoute(
+        cameFrom,
+        currentIndex,
+        width,
         bounds,
+        cellSize,
+        start,
+        goal,
         obstacles,
         obstaclePadding,
         segmentSampleStep,
       );
     }
 
-    openSet.delete(currentIndex);
     const currentCell = indexToGrid(currentIndex, width);
+    const currentHeuristic = heuristic(currentCell, goalCell);
+    if (currentHeuristic < bestHeuristic) {
+      bestHeuristic = currentHeuristic;
+      bestIndex = currentIndex;
+    }
 
     for (const [offsetX, offsetZ] of NEIGHBOR_OFFSETS) {
       const nextX = currentCell.x + offsetX;
@@ -200,10 +228,12 @@ export function findPath({
       }
 
       const neighborIndex = gridIndex(nextX, nextZ, width);
-      if (blocked[neighborIndex]) {
+      if (blocked[neighborIndex] || closed[neighborIndex]) {
         continue;
       }
 
+      // Disallow cutting diagonally past a corner: both orthogonal cells must
+      // be open, otherwise the path would clip the obstacle.
       if (offsetX !== 0 && offsetZ !== 0) {
         const horizontalIndex = gridIndex(
           currentCell.x + offsetX,
@@ -226,15 +256,140 @@ export function findPath({
         continue;
       }
 
-      cameFrom.set(neighborIndex, currentIndex);
+      cameFrom[neighborIndex] = currentIndex;
       gScore[neighborIndex] = tentativeGScore;
-      fScore[neighborIndex] =
-        tentativeGScore + heuristic({ x: nextX, z: nextZ }, goalCell);
-      openSet.add(neighborIndex);
+      open.push(
+        neighborIndex,
+        tentativeGScore + heuristic({ x: nextX, z: nextZ }, goalCell),
+      );
     }
   }
 
+  // Goal unreachable. Return a partial route toward the closest reachable cell
+  // so the character still advances (and a follow-up click can continue).
+  if (allowPartialPath && bestIndex !== startIndex) {
+    return buildRoute(
+      cameFrom,
+      bestIndex,
+      width,
+      bounds,
+      cellSize,
+      start,
+      // The partial route ends at the reachable cell, not the real goal.
+      gridToPoint(
+        indexToGrid(bestIndex, width).x,
+        indexToGrid(bestIndex, width).z,
+        bounds,
+        cellSize,
+      ),
+      obstacles,
+      obstaclePadding,
+      segmentSampleStep,
+    );
+  }
+
   return null;
+}
+
+/**
+ * Reconstructs the grid path to `endIndex`, swaps the snapped endpoints for the
+ * real world start/goal, and smooths the result via line-of-sight checks.
+ */
+function buildRoute(
+  cameFrom: Int32Array,
+  endIndex: number,
+  width: number,
+  bounds: MovementBounds,
+  cellSize: number,
+  start: MovementPoint,
+  goal: MovementPoint,
+  obstacles: MovementObstacle[],
+  obstaclePadding: number,
+  segmentSampleStep: number,
+): MovementPoint[] {
+  const gridPath = reconstructPath(cameFrom, endIndex, width);
+  const rawPoints = [
+    start,
+    ...gridPath.map((cell) => gridToPoint(cell.x, cell.z, bounds, cellSize)),
+    goal,
+  ];
+  return smoothPath(
+    rawPoints,
+    bounds,
+    obstacles,
+    obstaclePadding,
+    segmentSampleStep,
+  );
+}
+
+/**
+ * Array-backed binary min-heap keyed by an external priority. Uses lazy
+ * deletion: a node may be pushed multiple times with improving priorities,
+ * and stale pops are skipped by the caller via a `closed` check.
+ */
+class MinHeap {
+  private indices: number[] = [];
+  private priorities: number[] = [];
+
+  get size(): number {
+    return this.indices.length;
+  }
+
+  push(index: number, priority: number): void {
+    this.indices.push(index);
+    this.priorities.push(priority);
+    this.siftUp(this.indices.length - 1);
+  }
+
+  pop(): number {
+    const n = this.indices.length;
+    if (n === 0) return -1;
+    const topIndex = this.indices[0];
+    const lastIndex = this.indices.pop()!;
+    const lastPriority = this.priorities.pop()!;
+    if (n > 1) {
+      this.indices[0] = lastIndex;
+      this.priorities[0] = lastPriority;
+      this.siftDown(0);
+    }
+    return topIndex;
+  }
+
+  private siftUp(i: number): void {
+    while (i > 0) {
+      const parent = (i - 1) >> 1;
+      if (this.priorities[parent] <= this.priorities[i]) break;
+      this.swap(i, parent);
+      i = parent;
+    }
+  }
+
+  private siftDown(i: number): void {
+    const n = this.indices.length;
+    for (;;) {
+      const left = 2 * i + 1;
+      const right = 2 * i + 2;
+      let smallest = i;
+      if (left < n && this.priorities[left] < this.priorities[smallest]) {
+        smallest = left;
+      }
+      if (right < n && this.priorities[right] < this.priorities[smallest]) {
+        smallest = right;
+      }
+      if (smallest === i) break;
+      this.swap(i, smallest);
+      i = smallest;
+    }
+  }
+
+  private swap(a: number, b: number): void {
+    const ti = this.indices[a];
+    this.indices[a] = this.indices[b];
+    this.indices[b] = ti;
+    const tp = this.priorities[a];
+    this.priorities[a] = this.priorities[b];
+    this.priorities[b] = tp;
+  }
 }
 
 function toObstacle(
@@ -294,34 +449,20 @@ function indexToGrid(index: number, width: number) {
   };
 }
 
-function findLowestScore(openSet: Set<number>, fScore: number[]) {
-  let bestIndex: number | null = null;
-  let bestScore = Number.POSITIVE_INFINITY;
-
-  for (const index of openSet) {
-    if (fScore[index] < bestScore) {
-      bestScore = fScore[index];
-      bestIndex = index;
-    }
-  }
-
-  return bestIndex;
-}
-
 function heuristic(a: MovementPoint, b: MovementPoint) {
   return Math.hypot(a.x - b.x, a.z - b.z);
 }
 
 function reconstructPath(
-  cameFrom: Map<number, number>,
+  cameFrom: Int32Array,
   currentIndex: number,
   width: number,
 ) {
   const path = [indexToGrid(currentIndex, width)];
   let cursor = currentIndex;
 
-  while (cameFrom.has(cursor)) {
-    cursor = cameFrom.get(cursor)!;
+  while (cameFrom[cursor] >= 0) {
+    cursor = cameFrom[cursor];
     path.push(indexToGrid(cursor, width));
   }
 
@@ -372,7 +513,7 @@ function findNearestOpenCell(
   cell: { x: number; z: number },
   width: number,
   height: number,
-  blocked: boolean[],
+  blocked: Uint8Array,
 ) {
   const clampedX = clamp(cell.x, 0, width - 1);
   const clampedZ = clamp(cell.z, 0, height - 1);
@@ -476,7 +617,7 @@ function isPointInsideObstacle(
   //   through with clearance (opening must be wide enough).
   // - halfZ (wall depth/thickness): do NOT subtract padding — this dimension
   //   spans the wall's thickness, not the passage width. The opening is always
-  //   set to wall.halfZ + margin, so subtracting obstaclePadding (0.72) would
+  //   set to wall.halfZ + margin, so subtracting obstaclePadding would
   //   make it negative for thin walls (halfZ ≈ 0.25–0.30).
   if (obstacle.openings && obstacle.openings.length > 0) {
     for (const opening of obstacle.openings) {
