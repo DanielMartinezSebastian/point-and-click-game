@@ -220,7 +220,7 @@ export type RuntimeMoveEvent = {
 };
 export type RuntimeCollideEvent = {
     type: "onCollide";
-    reason: "boundary" | "stuck";
+    reason: "boundary" | "stuck" | "pathblocked";
     position: GameVec3;
 };
 export type RuntimeDropEvent = {

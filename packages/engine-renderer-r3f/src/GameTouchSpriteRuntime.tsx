@@ -344,21 +344,47 @@ export function GameTouchSpriteRuntime({
     );
     const effectiveGoal = redirected ?? clickGoal;
 
-    const route = findPath({
-      start: { x: startPosition.x, z: startPosition.z },
-      goal: effectiveGoal,
+    const pathArgs = {
       bounds: playableBounds,
       walls: scene.walls,
       interactions: scene.interactions,
-    });
+    };
+    const startPt = { x: startPosition.x, z: startPosition.z };
+
+    const route = findPath({ start: startPt, goal: effectiveGoal, ...pathArgs });
 
     if (route && route.length > 0) {
       setRoute(route);
       return;
     }
 
-    setTarget(effectiveGoal.x, effectiveGoal.z);
-  }, [addWallWithData, clampToPlayableArea, debug, disableClickToMove, getEffectiveClickGoal, ground.y, playableBounds, playerSpawn, setRoute, setTarget, wallPointResetSignal, wallToolMode]);
+    // Path blocked: nudge the goal toward the player in cellSize steps and try
+    // again. This navigates the character as close as possible to the clicked
+    // point without walking through obstacles.
+    const dx = startPt.x - effectiveGoal.x;
+    const dz = startPt.z - effectiveGoal.z;
+    const dist = Math.hypot(dx, dz);
+    if (dist > 0) {
+      const STEP = 0.9; // ≈ pathfinding cellSize
+      const maxSteps = Math.min(8, Math.floor(dist / STEP));
+      for (let step = 1; step <= maxSteps; step++) {
+        const t = (step * STEP) / dist;
+        const nudgedGoal = { x: effectiveGoal.x + dx * t, z: effectiveGoal.z + dz * t };
+        const fallback = findPath({ start: startPt, goal: nudgedGoal, ...pathArgs });
+        if (fallback && fallback.length > 0) {
+          setRoute(fallback);
+          return;
+        }
+      }
+    }
+
+    // Truly unreachable — notify the host so it can react (e.g. play a blocked sfx).
+    emitRuntimeEvent(onRuntimeEvent, {
+      type: "onCollide",
+      reason: "pathblocked",
+      position: [effectiveGoal.x, ground.y, effectiveGoal.z],
+    });
+  }, [addWallWithData, clampToPlayableArea, debug, disableClickToMove, getEffectiveClickGoal, ground.y, onRuntimeEvent, playableBounds, playerSpawn, setRoute, wallPointResetSignal, wallToolMode]);
 
   const stopWallInteraction = useCallback(() => {
     wallInteractionRef.current = null;
