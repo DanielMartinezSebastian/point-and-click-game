@@ -1,10 +1,13 @@
 // Finer than the historical 0.9 so narrow passages between walls are
 // represented by at least one open cell and A* can route through them.
 const DEFAULT_CELL_SIZE = 0.5;
-// Clearance kept between the path and obstacles. The player collider is
-// ~0.55 wide in X, so 0.6 clears it with a small margin while still leaving
-// real doorways/gaps navigable (a gap needs to be > 2*padding = 1.2 wide).
+// Wall clearance: thin walls (halfZ≈0.25) need 0.6 so grid cells near the
+// wall face are marked blocked and the player never clips through diagonals.
 const DEFAULT_OBSTACLE_PADDING = 0.6;
+// Interaction object clearance: small cubes (halfX/Z≈0.95) don't need the
+// same clearance as walls. 0.3 keeps the player just clear of the surface
+// while leaving narrow corridors navigable.
+const DEFAULT_INTERACTION_PADDING = 0.3;
 const DEFAULT_SEGMENT_SAMPLE_STEP = 0.25;
 const NEIGHBOR_OFFSETS = [
     [-1, -1],
@@ -16,14 +19,14 @@ const NEIGHBOR_OFFSETS = [
     [1, 0],
     [1, 1],
 ];
-export function findPath({ start, goal, bounds, walls, interactions, cellSize = DEFAULT_CELL_SIZE, obstaclePadding = DEFAULT_OBSTACLE_PADDING, segmentSampleStep = DEFAULT_SEGMENT_SAMPLE_STEP, maxIterations, allowPartialPath = true, }) {
+export function findPath({ start, goal, bounds, walls, interactions, cellSize = DEFAULT_CELL_SIZE, obstaclePadding = DEFAULT_OBSTACLE_PADDING, interactionPadding = DEFAULT_INTERACTION_PADDING, segmentSampleStep = DEFAULT_SEGMENT_SAMPLE_STEP, maxIterations, allowPartialPath = true, }) {
     const obstacles = [
-        ...walls.map((wall) => toObstacle(wall.position[0], wall.position[2], wall.halfSize[0], wall.halfSize[2], wall.rotationY, wall.openings)),
+        ...walls.map((wall) => toObstacle(wall.position[0], wall.position[2], wall.halfSize[0], wall.halfSize[2], wall.rotationY, obstaclePadding, wall.openings)),
         ...interactions
             .filter((interaction) => interaction.hasCollision)
-            .map((interaction) => toObstacle(interaction.position[0], interaction.position[2], interaction.halfSize[0], interaction.halfSize[2], interaction.rotationY ?? 0)),
+            .map((interaction) => toObstacle(interaction.position[0], interaction.position[2], interaction.halfSize[0], interaction.halfSize[2], interaction.rotationY ?? 0, interactionPadding)),
     ];
-    if (isSegmentClear(start, goal, bounds, obstacles, obstaclePadding, segmentSampleStep)) {
+    if (isSegmentClear(start, goal, bounds, obstacles, segmentSampleStep)) {
         return [goal];
     }
     const width = Math.max(1, Math.floor((bounds.maxX - bounds.minX) / cellSize) + 1);
@@ -36,7 +39,7 @@ export function findPath({ start, goal, bounds, walls, interactions, cellSize = 
     for (let gridZ = 0; gridZ < height; gridZ += 1) {
         for (let gridX = 0; gridX < width; gridX += 1) {
             const point = gridToPoint(gridX, gridZ, bounds, cellSize);
-            blocked[gridIndex(gridX, gridZ, width)] = isPointBlocked(point, bounds, obstacles, obstaclePadding)
+            blocked[gridIndex(gridX, gridZ, width)] = isPointBlocked(point, bounds, obstacles)
                 ? 1
                 : 0;
         }
@@ -72,7 +75,7 @@ export function findPath({ start, goal, bounds, walls, interactions, cellSize = 
         }
         closed[currentIndex] = 1;
         if (currentIndex === goalIndex) {
-            return buildRoute(cameFrom, currentIndex, width, bounds, cellSize, start, goal, obstacles, obstaclePadding, segmentSampleStep);
+            return buildRoute(cameFrom, currentIndex, width, bounds, cellSize, start, goal, obstacles, segmentSampleStep);
         }
         const currentCell = indexToGrid(currentIndex, width);
         const currentHeuristic = heuristic(currentCell, goalCell);
@@ -113,7 +116,7 @@ export function findPath({ start, goal, bounds, walls, interactions, cellSize = 
     if (allowPartialPath && bestIndex !== startIndex) {
         return buildRoute(cameFrom, bestIndex, width, bounds, cellSize, start, 
         // The partial route ends at the reachable cell, not the real goal.
-        gridToPoint(indexToGrid(bestIndex, width).x, indexToGrid(bestIndex, width).z, bounds, cellSize), obstacles, obstaclePadding, segmentSampleStep);
+        gridToPoint(indexToGrid(bestIndex, width).x, indexToGrid(bestIndex, width).z, bounds, cellSize), obstacles, segmentSampleStep);
     }
     return null;
 }
@@ -121,14 +124,14 @@ export function findPath({ start, goal, bounds, walls, interactions, cellSize = 
  * Reconstructs the grid path to `endIndex`, swaps the snapped endpoints for the
  * real world start/goal, and smooths the result via line-of-sight checks.
  */
-function buildRoute(cameFrom, endIndex, width, bounds, cellSize, start, goal, obstacles, obstaclePadding, segmentSampleStep) {
+function buildRoute(cameFrom, endIndex, width, bounds, cellSize, start, goal, obstacles, segmentSampleStep) {
     const gridPath = reconstructPath(cameFrom, endIndex, width);
     const rawPoints = [
         start,
         ...gridPath.map((cell) => gridToPoint(cell.x, cell.z, bounds, cellSize)),
         goal,
     ];
-    return smoothPath(rawPoints, bounds, obstacles, obstaclePadding, segmentSampleStep);
+    return smoothPath(rawPoints, bounds, obstacles, segmentSampleStep);
 }
 /**
  * Array-backed binary min-heap keyed by an external priority. Uses lazy
@@ -198,13 +201,14 @@ class MinHeap {
         this.priorities[b] = tp;
     }
 }
-function toObstacle(x, z, halfX, halfZ, rotationY, openings) {
+function toObstacle(x, z, halfX, halfZ, rotationY, padding, openings) {
     return {
         x,
         z,
         halfX,
         halfZ,
         rotationY: rotationY ?? 0,
+        padding,
         openings: openings?.map((o) => ({
             centerX: o.position[0],
             centerZ: o.position[2],
@@ -247,7 +251,7 @@ function reconstructPath(cameFrom, currentIndex, width) {
     path.reverse();
     return path.slice(1, -1);
 }
-function smoothPath(points, bounds, obstacles, obstaclePadding, segmentSampleStep) {
+function smoothPath(points, bounds, obstacles, segmentSampleStep) {
     if (points.length <= 2) {
         return [points[points.length - 1]];
     }
@@ -256,7 +260,7 @@ function smoothPath(points, bounds, obstacles, obstaclePadding, segmentSampleSte
     while (anchorIndex < points.length - 1) {
         let nextIndex = points.length - 1;
         while (nextIndex > anchorIndex + 1) {
-            if (isSegmentClear(points[anchorIndex], points[nextIndex], bounds, obstacles, obstaclePadding, segmentSampleStep)) {
+            if (isSegmentClear(points[anchorIndex], points[nextIndex], bounds, obstacles, segmentSampleStep)) {
                 break;
             }
             nextIndex -= 1;
@@ -293,7 +297,7 @@ function findNearestOpenCell(cell, width, height, blocked) {
     }
     return null;
 }
-function isSegmentClear(start, goal, bounds, obstacles, obstaclePadding, segmentSampleStep) {
+function isSegmentClear(start, goal, bounds, obstacles, segmentSampleStep) {
     const distance = Math.hypot(goal.x - start.x, goal.z - start.z);
     const samples = Math.max(1, Math.ceil(distance / segmentSampleStep));
     for (let index = 0; index <= samples; index += 1) {
@@ -302,22 +306,22 @@ function isSegmentClear(start, goal, bounds, obstacles, obstaclePadding, segment
             x: lerp(start.x, goal.x, t),
             z: lerp(start.z, goal.z, t),
         };
-        if (isPointBlocked(point, bounds, obstacles, obstaclePadding)) {
+        if (isPointBlocked(point, bounds, obstacles)) {
             return false;
         }
     }
     return true;
 }
-function isPointBlocked(point, bounds, obstacles, obstaclePadding) {
+function isPointBlocked(point, bounds, obstacles) {
     if (point.x < bounds.minX ||
         point.x > bounds.maxX ||
         point.z < bounds.minZ ||
         point.z > bounds.maxZ) {
         return true;
     }
-    return obstacles.some((obstacle) => isPointInsideObstacle(point, obstacle, obstaclePadding));
+    return obstacles.some((obstacle) => isPointInsideObstacle(point, obstacle));
 }
-function isPointInsideObstacle(point, obstacle, obstaclePadding) {
+function isPointInsideObstacle(point, obstacle) {
     const localX = point.x - obstacle.x;
     const localZ = point.z - obstacle.z;
     const cos = Math.cos(-obstacle.rotationY);
@@ -325,21 +329,21 @@ function isPointInsideObstacle(point, obstacle, obstaclePadding) {
     const rotatedX = localX * cos - localZ * sin;
     const rotatedZ = localX * sin + localZ * cos;
     // Check if the point is inside the obstacle's solid area (with padding)
-    const insideWall = Math.abs(rotatedX) <= obstacle.halfX + obstaclePadding &&
-        Math.abs(rotatedZ) <= obstacle.halfZ + obstaclePadding;
+    const insideWall = Math.abs(rotatedX) <= obstacle.halfX + obstacle.padding &&
+        Math.abs(rotatedZ) <= obstacle.halfZ + obstacle.padding;
     if (!insideWall)
         return false;
     // If the point is inside the wall, check if it is also inside an opening.
     // Openings are holes that allow traversal.
-    // - halfX (horizontal width): subtract obstaclePadding so the agent fits
-    //   through with clearance (opening must be wide enough).
+    // - halfX (horizontal width): subtract padding so the agent fits through
+    //   with clearance (opening must be wide enough).
     // - halfZ (wall depth/thickness): do NOT subtract padding — this dimension
     //   spans the wall's thickness, not the passage width. The opening is always
-    //   set to wall.halfZ + margin, so subtracting obstaclePadding would
-    //   make it negative for thin walls (halfZ ≈ 0.25–0.30).
+    //   set to wall.halfZ + margin, so subtracting padding would make it
+    //   negative for thin walls (halfZ ≈ 0.25–0.30).
     if (obstacle.openings && obstacle.openings.length > 0) {
         for (const opening of obstacle.openings) {
-            const openHalfX = opening.halfX - obstaclePadding;
+            const openHalfX = opening.halfX - obstacle.padding;
             if (openHalfX > 0 &&
                 Math.abs(rotatedX - opening.centerX) <= openHalfX &&
                 Math.abs(rotatedZ - opening.centerZ) <= opening.halfZ) {

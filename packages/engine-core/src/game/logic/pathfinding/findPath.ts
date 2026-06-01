@@ -31,7 +31,13 @@ type MovementObstacle = {
   halfX: number;
   halfZ: number;
   rotationY: number;
-  /** Openings (doors/windows) that allow traversal through this obstacle. */
+  /**
+   * Clearance distance added to halfX/halfZ when checking if a point is
+   * blocked. Embedded per-obstacle so walls and interaction objects can use
+   * different values without threading a separate parameter through every
+   * helper function.
+   */
+  padding: number;
   openings?: ObstacleOpening[];
 };
 
@@ -43,6 +49,13 @@ type FindPathOptions = {
   interactions: GameSceneInteraction[];
   cellSize?: number;
   obstaclePadding?: number;
+  /**
+   * Clearance added around collision interaction objects (pedestals, props).
+   * These are typically small standalone cubes that need less clearance than
+   * long thin walls. Defaults to 0.3 — just over the player's half-width (0.275)
+   * so the character still fits past them without wasting navigable space.
+   */
+  interactionPadding?: number;
   segmentSampleStep?: number;
   maxIterations?: number;
   /**
@@ -56,10 +69,13 @@ type FindPathOptions = {
 // Finer than the historical 0.9 so narrow passages between walls are
 // represented by at least one open cell and A* can route through them.
 const DEFAULT_CELL_SIZE = 0.5;
-// Clearance kept between the path and obstacles. The player collider is
-// ~0.55 wide in X, so 0.6 clears it with a small margin while still leaving
-// real doorways/gaps navigable (a gap needs to be > 2*padding = 1.2 wide).
+// Wall clearance: thin walls (halfZ≈0.25) need 0.6 so grid cells near the
+// wall face are marked blocked and the player never clips through diagonals.
 const DEFAULT_OBSTACLE_PADDING = 0.6;
+// Interaction object clearance: small cubes (halfX/Z≈0.95) don't need the
+// same clearance as walls. 0.3 keeps the player just clear of the surface
+// while leaving narrow corridors navigable.
+const DEFAULT_INTERACTION_PADDING = 0.3;
 const DEFAULT_SEGMENT_SAMPLE_STEP = 0.25;
 const NEIGHBOR_OFFSETS = [
   [-1, -1],
@@ -80,11 +96,12 @@ export function findPath({
   interactions,
   cellSize = DEFAULT_CELL_SIZE,
   obstaclePadding = DEFAULT_OBSTACLE_PADDING,
+  interactionPadding = DEFAULT_INTERACTION_PADDING,
   segmentSampleStep = DEFAULT_SEGMENT_SAMPLE_STEP,
   maxIterations,
   allowPartialPath = true,
 }: FindPathOptions): MovementPoint[] | null {
-  const obstacles = [
+  const obstacles: MovementObstacle[] = [
     ...walls.map((wall) =>
       toObstacle(
         wall.position[0],
@@ -92,6 +109,7 @@ export function findPath({
         wall.halfSize[0],
         wall.halfSize[2],
         wall.rotationY,
+        obstaclePadding,
         wall.openings,
       ),
     ),
@@ -104,20 +122,12 @@ export function findPath({
           interaction.halfSize[0],
           interaction.halfSize[2],
           interaction.rotationY ?? 0,
+          interactionPadding,
         ),
       ),
   ];
 
-  if (
-    isSegmentClear(
-      start,
-      goal,
-      bounds,
-      obstacles,
-      obstaclePadding,
-      segmentSampleStep,
-    )
-  ) {
+  if (isSegmentClear(start, goal, bounds, obstacles, segmentSampleStep)) {
     return [goal];
   }
 
@@ -143,7 +153,6 @@ export function findPath({
         point,
         bounds,
         obstacles,
-        obstaclePadding,
       )
         ? 1
         : 0;
@@ -208,7 +217,6 @@ export function findPath({
         start,
         goal,
         obstacles,
-        obstaclePadding,
         segmentSampleStep,
       );
     }
@@ -283,7 +291,6 @@ export function findPath({
         cellSize,
       ),
       obstacles,
-      obstaclePadding,
       segmentSampleStep,
     );
   }
@@ -304,7 +311,6 @@ function buildRoute(
   start: MovementPoint,
   goal: MovementPoint,
   obstacles: MovementObstacle[],
-  obstaclePadding: number,
   segmentSampleStep: number,
 ): MovementPoint[] {
   const gridPath = reconstructPath(cameFrom, endIndex, width);
@@ -313,13 +319,7 @@ function buildRoute(
     ...gridPath.map((cell) => gridToPoint(cell.x, cell.z, bounds, cellSize)),
     goal,
   ];
-  return smoothPath(
-    rawPoints,
-    bounds,
-    obstacles,
-    obstaclePadding,
-    segmentSampleStep,
-  );
+  return smoothPath(rawPoints, bounds, obstacles, segmentSampleStep);
 }
 
 /**
@@ -398,6 +398,7 @@ function toObstacle(
   halfX: number,
   halfZ: number,
   rotationY: number | undefined,
+  padding: number,
   openings?: GameSceneWallOpening[],
 ): MovementObstacle {
   return {
@@ -406,6 +407,7 @@ function toObstacle(
     halfX,
     halfZ,
     rotationY: rotationY ?? 0,
+    padding,
     openings: openings?.map((o) => ({
       centerX: o.position[0],
       centerZ: o.position[2],
@@ -474,7 +476,6 @@ function smoothPath(
   points: MovementPoint[],
   bounds: MovementBounds,
   obstacles: MovementObstacle[],
-  obstaclePadding: number,
   segmentSampleStep: number,
 ) {
   if (points.length <= 2) {
@@ -493,7 +494,6 @@ function smoothPath(
           points[nextIndex],
           bounds,
           obstacles,
-          obstaclePadding,
           segmentSampleStep,
         )
       ) {
@@ -551,7 +551,6 @@ function isSegmentClear(
   goal: MovementPoint,
   bounds: MovementBounds,
   obstacles: MovementObstacle[],
-  obstaclePadding: number,
   segmentSampleStep: number,
 ) {
   const distance = Math.hypot(goal.x - start.x, goal.z - start.z);
@@ -564,7 +563,7 @@ function isSegmentClear(
       z: lerp(start.z, goal.z, t),
     };
 
-    if (isPointBlocked(point, bounds, obstacles, obstaclePadding)) {
+    if (isPointBlocked(point, bounds, obstacles)) {
       return false;
     }
   }
@@ -576,7 +575,6 @@ function isPointBlocked(
   point: MovementPoint,
   bounds: MovementBounds,
   obstacles: MovementObstacle[],
-  obstaclePadding: number,
 ) {
   if (
     point.x < bounds.minX ||
@@ -587,15 +585,12 @@ function isPointBlocked(
     return true;
   }
 
-  return obstacles.some((obstacle) =>
-    isPointInsideObstacle(point, obstacle, obstaclePadding),
-  );
+  return obstacles.some((obstacle) => isPointInsideObstacle(point, obstacle));
 }
 
 function isPointInsideObstacle(
   point: MovementPoint,
   obstacle: MovementObstacle,
-  obstaclePadding: number,
 ) {
   const localX = point.x - obstacle.x;
   const localZ = point.z - obstacle.z;
@@ -606,22 +601,22 @@ function isPointInsideObstacle(
 
   // Check if the point is inside the obstacle's solid area (with padding)
   const insideWall =
-    Math.abs(rotatedX) <= obstacle.halfX + obstaclePadding &&
-    Math.abs(rotatedZ) <= obstacle.halfZ + obstaclePadding;
+    Math.abs(rotatedX) <= obstacle.halfX + obstacle.padding &&
+    Math.abs(rotatedZ) <= obstacle.halfZ + obstacle.padding;
 
   if (!insideWall) return false;
 
   // If the point is inside the wall, check if it is also inside an opening.
   // Openings are holes that allow traversal.
-  // - halfX (horizontal width): subtract obstaclePadding so the agent fits
-  //   through with clearance (opening must be wide enough).
+  // - halfX (horizontal width): subtract padding so the agent fits through
+  //   with clearance (opening must be wide enough).
   // - halfZ (wall depth/thickness): do NOT subtract padding — this dimension
   //   spans the wall's thickness, not the passage width. The opening is always
-  //   set to wall.halfZ + margin, so subtracting obstaclePadding would
-  //   make it negative for thin walls (halfZ ≈ 0.25–0.30).
+  //   set to wall.halfZ + margin, so subtracting padding would make it
+  //   negative for thin walls (halfZ ≈ 0.25–0.30).
   if (obstacle.openings && obstacle.openings.length > 0) {
     for (const opening of obstacle.openings) {
-      const openHalfX = opening.halfX - obstaclePadding;
+      const openHalfX = opening.halfX - obstacle.padding;
       if (
         openHalfX > 0 &&
         Math.abs(rotatedX - opening.centerX) <= openHalfX &&

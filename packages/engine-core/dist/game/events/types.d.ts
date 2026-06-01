@@ -16,7 +16,7 @@ export type GameEvent = {
     action: "idle" | "north" | "south" | "west" | "east";
 } | {
     type: "player:collided";
-    reason: "boundary" | "stuck";
+    reason: "boundary" | "stuck" | "pathblocked";
     position: GameVec3;
 } | {
     type: "item:pickedUp";
