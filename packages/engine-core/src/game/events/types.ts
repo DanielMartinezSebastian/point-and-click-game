@@ -14,7 +14,7 @@ export type GameEvent =
       position: GameVec3;
       action: "idle" | "north" | "south" | "west" | "east";
     }
-  | { type: "player:collided"; reason: "boundary" | "stuck"; position: GameVec3 }
+  | { type: "player:collided"; reason: "boundary" | "stuck" | "pathblocked"; position: GameVec3 }
   // Inventory
   | { type: "item:pickedUp"; itemId: string; quantity: number }
   | {

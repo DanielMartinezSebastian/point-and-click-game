@@ -162,4 +162,97 @@ describe("findPath", () => {
 
     expect(route).toBeNull();
   });
+
+  // Four thin walls enclosing the goal at (8,8) with no opening → the goal's
+  // interior cell is open but disconnected from the rest of the grid.
+  const sealedRoomWalls = [
+    { position: [8, 0, 9] as [number, number, number], halfSize: [1.2, 2, 0.2] as [number, number, number], rotationY: 0 },
+    { position: [8, 0, 7] as [number, number, number], halfSize: [1.2, 2, 0.2] as [number, number, number], rotationY: 0 },
+    { position: [7, 0, 8] as [number, number, number], halfSize: [0.2, 2, 1.2] as [number, number, number], rotationY: 0 },
+    { position: [9, 0, 8] as [number, number, number], halfSize: [0.2, 2, 1.2] as [number, number, number], rotationY: 0 },
+  ];
+
+  it("devuelve ruta parcial hacia el objetivo cuando este es inalcanzable", () => {
+    // Goal sits inside a sealed room, start is in open space. Instead of
+    // freezing (null), findPath should return a partial route that advances the
+    // character toward the closest reachable point.
+    const route = findPath({
+      start: { x: 1, z: 1 },
+      goal: { x: 8, z: 8 },
+      bounds,
+      walls: sealedRoomWalls,
+      interactions: [],
+      obstaclePadding: 0.2,
+      cellSize: 0.4,
+      segmentSampleStep: 0.15,
+    });
+
+    expect(route).not.toBeNull();
+    expect(route!.length).toBeGreaterThan(0);
+    // The partial route should move the character closer to the goal than it
+    // started — i.e. the final point is nearer to (8,8) than (1,1) is.
+    const last = route![route!.length - 1];
+    const startToGoal = Math.hypot(8 - 1, 8 - 1);
+    const lastToGoal = Math.hypot(8 - last.x, 8 - last.z);
+    expect(lastToGoal).toBeLessThan(startToGoal);
+    // ...but it must NOT reach the sealed interior.
+    expect(lastToGoal).toBeGreaterThan(0.5);
+  });
+
+  it("respeta allowPartialPath=false devolviendo null si no llega al objetivo", () => {
+    const route = findPath({
+      start: { x: 1, z: 1 },
+      goal: { x: 8, z: 8 },
+      bounds,
+      walls: sealedRoomWalls,
+      interactions: [],
+      obstaclePadding: 0.2,
+      cellSize: 0.4,
+      allowPartialPath: false,
+    });
+
+    expect(route).toBeNull();
+  });
+
+  it("encuentra un pasillo estrecho entre dos muros", () => {
+    // Two walls leave a narrow vertical gap around x=5 (gap width ≈ 1.4).
+    // With a fine grid + moderate padding, A* must thread the gap.
+    const route = findPath({
+      start: { x: 5, z: 1 },
+      goal: { x: 5, z: 9 },
+      bounds,
+      walls: [
+        { position: [2.15, 0, 5], halfSize: [2.15, 2, 0.4], rotationY: 0 },
+        { position: [7.85, 0, 5], halfSize: [2.15, 2, 0.4], rotationY: 0 },
+      ],
+      interactions: [],
+      obstaclePadding: 0.3,
+      cellSize: 0.4,
+      segmentSampleStep: 0.15,
+    });
+
+    expect(route).not.toBeNull();
+    expect(route![route!.length - 1]).toEqual({ x: 5, z: 9 });
+  });
+
+  it("explora cuadrículas grandes sin agotar iteraciones (rendimiento del heap)", () => {
+    // A large open grid: the binary-heap A* must reach the far corner quickly.
+    const bigBounds = { minX: 0, maxX: 60, minZ: 0, maxZ: 60, y: 0 };
+    const route = findPath({
+      start: { x: 1, z: 1 },
+      goal: { x: 59, z: 59 },
+      bounds: bigBounds,
+      walls: [
+        // A central wall to force the grid search (not a trivial direct line).
+        { position: [30, 0, 30], halfSize: [0.5, 2, 20], rotationY: 0 },
+      ],
+      interactions: [],
+      obstaclePadding: 0.4,
+      cellSize: 0.5,
+    });
+
+    expect(route).not.toBeNull();
+    expect(route![route!.length - 1]).toEqual({ x: 59, z: 59 });
+  });
 });
+
