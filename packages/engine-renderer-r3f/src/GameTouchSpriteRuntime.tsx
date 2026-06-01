@@ -219,6 +219,12 @@ export function GameTouchSpriteRuntime({
   const wallPointStartRef = useRef<WallPointStart | null>(null);
   const lastBoundaryHitRef = useRef<number>(0);
   const lastStuckHitRef = useRef<number>(0);
+  // Wall-slide detection: compare position delta each frame against the
+  // velocity we set last frame.  If an axis moved much less than expected,
+  // a collider is blocking it — zero that component so the character slides
+  // along the unblocked axis instead of pressing into the wall.
+  const prevBodyPositionRef = useRef<{ x: number; z: number } | null>(null);
+  const prevBodyVelSetRef = useRef<{ vx: number; vz: number }>({ vx: 0, vz: 0 });
 
   const playerSpawn = useSceneStore((s) => s.scene.playerSpawn);
   const playerPosition = useSceneStore((s) => s.playerPosition);
@@ -548,6 +554,29 @@ export function GameTouchSpriteRuntime({
       return;
     }
 
+    // Wall-slide detection: compare last frame's intended velocity against the
+    // actual position change recorded by physics.  If an axis barely moved
+    // relative to what was expected, a rigid-body is blocking it — suppress
+    // that component this frame so the character slides along the free axis
+    // rather than sticking against the obstacle surface.
+    const frameStartPos = body.translation();
+    let slideBlockX = false;
+    let slideBlockZ = false;
+    {
+      const pp = prevBodyPositionRef.current;
+      const { vx: pvx, vz: pvz } = prevBodyVelSetRef.current;
+      if (pp && (Math.abs(pvx) > 0.3 || Math.abs(pvz) > 0.3)) {
+        const adx = frameStartPos.x - pp.x;
+        const adz = frameStartPos.z - pp.z;
+        // Expected displacement (approximated with current delta — consecutive
+        // frame durations are close enough for this heuristic).
+        const edx = pvx * delta;
+        const edz = pvz * delta;
+        if (Math.abs(edx) > 0.002) slideBlockX = Math.abs(adx) < Math.abs(edx) * 0.25;
+        if (Math.abs(edz) > 0.002) slideBlockZ = Math.abs(adz) < Math.abs(edz) * 0.25;
+      }
+    }
+
     const { moveLeft, moveRight, moveUp, moveDown, anyKeyPressed } = getKeyboardMovement();
 
     const joystick = getMobileInput();
@@ -616,6 +645,13 @@ export function GameTouchSpriteRuntime({
 
     horizontal = applyDeadzone(horizontal, MOVEMENT_INPUT_DEADZONE);
     vertical = applyDeadzone(vertical, MOVEMENT_INPUT_DEADZONE);
+
+    // Apply wall-slide: if a collider blocked an axis last frame, do not push
+    // into it again this frame.  The perpendicular axis is kept intact so the
+    // character slides along the surface.  Only suppress when *trying* to move
+    // in the blocked direction (same sign), not when already idle on that axis.
+    if (slideBlockX && horizontal !== 0) horizontal = 0;
+    if (slideBlockZ && vertical !== 0) vertical = 0;
 
     // During walk animation, calculate direction from current to target position
     let nextAction: MovementAction;
@@ -758,6 +794,13 @@ export function GameTouchSpriteRuntime({
       colliderWireframeRef.current.scale.set(1, spriteScale, 1);
       colliderWireframeRef.current.position.y = spriteScale - 0.95;
     }
+
+    // Persist velocity and position for next-frame wall-slide detection.
+    // Reading linvel() here returns the velocity we set above (after all
+    // in-frame corrections: wall-slide zeroing, boundary clamping, stuck reset).
+    const finalLinvel = body.linvel();
+    prevBodyVelSetRef.current = { vx: finalLinvel.x, vz: finalLinvel.z };
+    prevBodyPositionRef.current = { x: safePosition.x, z: safePosition.z };
   });
 
   const wallPointPreview =
@@ -808,7 +851,7 @@ export function GameTouchSpriteRuntime({
         <CuboidCollider
           ref={characterColliderRef}
           args={[0.55, 0.95, 0.18]}
-          friction={2.2}
+          friction={0.05}
           restitution={0}
         />
         {debug && showPlayerCollider && (

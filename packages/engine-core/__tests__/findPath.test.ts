@@ -254,5 +254,48 @@ describe("findPath", () => {
     expect(route).not.toBeNull();
     expect(route![route!.length - 1]).toEqual({ x: 59, z: 59 });
   });
+
+  it("thick-segment check preserva waypoints intermedios junto a una esquina de obstáculo", () => {
+    // Wall in the upper-right area.  A naïve line-of-sight shortcut from the
+    // start to the goal would clip the corner of the padded obstacle because
+    // the offset path (player half-width from centre) enters the padded zone.
+    // The thick-segment check must reject that shortcut and keep at least one
+    // intermediate waypoint that routes around the corner safely.
+    //
+    // Layout (grid 0..10 × 0..10):
+    //   wall: centre (6,6), halfX=1.5, halfZ=1.5 → padded right/top edge ≈ 7.6
+    //   start: (1, 1) — bottom-left open area
+    //   goal:  (9, 1) — bottom-right, requires going below/around the wall
+    //
+    // With default obstaclePadding (0.6) the direct path (1,1)→(9,1) is clear
+    // (it runs along z=1 well below the wall at z=6), so the route is direct.
+    // But if we move the goal to (9,9) the path must round the corner, and the
+    // thick check should prevent a diagonal shortcut that clips it.
+    const cornerBounds = { minX: 0, maxX: 10, minZ: 0, maxZ: 10, y: 0 };
+    const cornerWall = [
+      { position: [6, 0, 6] as [number, number, number], halfSize: [1.5, 2, 1.5] as [number, number, number], rotationY: 0 },
+    ];
+
+    // A direct diagonal from (1,1) to (9,9) would pass right through the wall —
+    // the route must detour and contain more than one waypoint.
+    const routeAroundCorner = findPath({
+      start: { x: 1, z: 1 },
+      goal: { x: 9, z: 9 },
+      bounds: cornerBounds,
+      walls: cornerWall,
+      interactions: [],
+      obstaclePadding: 0.6,
+      cellSize: 0.5,
+      segmentSampleStep: 0.25,
+    });
+
+    expect(routeAroundCorner).not.toBeNull();
+    expect(routeAroundCorner!.length).toBeGreaterThan(1);
+    // Every waypoint must be outside the padded obstacle boundary (centre ±2.1).
+    for (const p of routeAroundCorner!) {
+      const outsidePadded = Math.abs(p.x - 6) > 2.1 || Math.abs(p.z - 6) > 2.1;
+      expect(outsidePadded).toBe(true);
+    }
+  });
 });
 

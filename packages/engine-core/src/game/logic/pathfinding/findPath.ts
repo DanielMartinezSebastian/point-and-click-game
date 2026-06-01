@@ -77,6 +77,12 @@ const DEFAULT_OBSTACLE_PADDING = 0.6;
 // while leaving narrow corridors navigable.
 const DEFAULT_INTERACTION_PADDING = 0.3;
 const DEFAULT_SEGMENT_SAMPLE_STEP = 0.25;
+// Half-width of the player collider used when vetting line-of-sight shortcuts
+// during path smoothing. Checking offset paths prevents the smoother from
+// creating segments that clip obstacle corners even though the centre line is
+// technically clear. Must be >= the physics collider halfX (0.55) minus the
+// obstacle padding (0.6) so the net clearance from obstacle surface is > 0.
+const PLAYER_PATH_HALF_WIDTH = 0.28;
 const NEIGHBOR_OFFSETS = [
   [-1, -1],
   [-1, 0],
@@ -127,7 +133,7 @@ export function findPath({
       ),
   ];
 
-  if (isSegmentClear(start, goal, bounds, obstacles, segmentSampleStep)) {
+  if (isThickSegmentClear(start, goal, bounds, obstacles, segmentSampleStep)) {
     return [goal];
   }
 
@@ -489,9 +495,9 @@ function smoothPath(
     let nextIndex = points.length - 1;
     while (nextIndex > anchorIndex + 1) {
       if (
-        isSegmentClear(
-          points[anchorIndex],
-          points[nextIndex],
+        isThickSegmentClear(
+          points[anchorIndex]!,
+          points[nextIndex]!,
           bounds,
           obstacles,
           segmentSampleStep,
@@ -502,7 +508,7 @@ function smoothPath(
       nextIndex -= 1;
     }
 
-    result.push(points[nextIndex]);
+    result.push(points[nextIndex]!);
     anchorIndex = nextIndex;
   }
 
@@ -544,6 +550,47 @@ function findNearestOpenCell(
   }
 
   return null;
+}
+
+/**
+ * Like isSegmentClear but also checks two paths offset perpendicular to the
+ * movement direction by PLAYER_PATH_HALF_WIDTH. This prevents path smoothing
+ * from creating shortcuts that clip obstacle corners: even if the centre line
+ * is clear, a shortcut is only allowed when the full swept width of the player
+ * would fit without touching a padded obstacle boundary.
+ */
+function isThickSegmentClear(
+  start: MovementPoint,
+  goal: MovementPoint,
+  bounds: MovementBounds,
+  obstacles: MovementObstacle[],
+  segmentSampleStep: number,
+): boolean {
+  if (!isSegmentClear(start, goal, bounds, obstacles, segmentSampleStep)) {
+    return false;
+  }
+  const dx = goal.x - start.x;
+  const dz = goal.z - start.z;
+  const len = Math.hypot(dx, dz);
+  if (len < 0.001) return true;
+  const perpX = (-dz / len) * PLAYER_PATH_HALF_WIDTH;
+  const perpZ = (dx / len) * PLAYER_PATH_HALF_WIDTH;
+  return (
+    isSegmentClear(
+      { x: start.x + perpX, z: start.z + perpZ },
+      { x: goal.x + perpX, z: goal.z + perpZ },
+      bounds,
+      obstacles,
+      segmentSampleStep,
+    ) &&
+    isSegmentClear(
+      { x: start.x - perpX, z: start.z - perpZ },
+      { x: goal.x - perpX, z: goal.z - perpZ },
+      bounds,
+      obstacles,
+      segmentSampleStep,
+    )
+  );
 }
 
 function isSegmentClear(

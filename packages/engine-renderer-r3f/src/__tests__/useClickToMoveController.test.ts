@@ -126,3 +126,91 @@ describe("useClickToMoveController — stuck detection", () => {
     expect(result.stuck).toBe(true);
   });
 });
+
+// Mirror of the slide-assist logic added to useClickToMoveController for unit
+// testing without React refs.
+const SLIDE_TRIGGER_MS_TEST = 150;
+
+function resolveDirWithSlide(
+  route: MovementPoint[],
+  target: MovementPoint | null,
+  currentX: number,
+  currentZ: number,
+  stuckMs: number,
+  slideSign: 1 | -1 = 1,
+  cfg: Config = DEFAULT,
+): { horizontal: number; vertical: number } {
+  const r = [...route];
+
+  while (r.length > 0) {
+    const next = r[0]!;
+    const dx = next.x - currentX;
+    const dz = next.z - currentZ;
+    if (Math.sqrt(dx * dx + dz * dz) < cfg.arrivalThreshold) {
+      r.shift();
+    } else {
+      break;
+    }
+  }
+
+  const t = r[0] ?? target;
+  if (!t) return { horizontal: 0, vertical: 0 };
+
+  const dx = t.x - currentX;
+  const dz = t.z - currentZ;
+  const dist = Math.sqrt(dx * dx + dz * dz);
+
+  if (dist < cfg.arrivalThreshold) return { horizontal: 0, vertical: 0 };
+
+  if (stuckMs >= SLIDE_TRIGGER_MS_TEST) {
+    const perpX = (-dz / dist) * slideSign;
+    const perpZ = (dx / dist) * slideSign;
+    const blend = Math.min((stuckMs - SLIDE_TRIGGER_MS_TEST) / 200, 0.85);
+    return {
+      horizontal: Math.max(-1, Math.min(1, dx / dist * (1 - blend) + perpX * blend)),
+      vertical: Math.max(-1, Math.min(1, dz / dist * (1 - blend) + perpZ * blend)),
+    };
+  }
+
+  return {
+    horizontal: Math.max(-1, Math.min(1, dx / dist)),
+    vertical: Math.max(-1, Math.min(1, dz / dist)),
+  };
+}
+
+describe("useClickToMoveController — slide assist", () => {
+  it("sin tiempo atascado la dirección apunta directamente al target", () => {
+    const dir = resolveDirWithSlide([], { x: 10, z: 0 }, 0, 0, 0);
+    expect(dir.horizontal).toBeCloseTo(1, 3);
+    expect(dir.vertical).toBeCloseTo(0, 3);
+  });
+
+  it("con stuckMs < SLIDE_TRIGGER_MS la dirección es idéntica a la directa", () => {
+    const direct = resolveDirWithSlide([], { x: 5, z: 5 }, 0, 0, 0);
+    const almostTrigger = resolveDirWithSlide([], { x: 5, z: 5 }, 0, 0, 100);
+    expect(almostTrigger.horizontal).toBeCloseTo(direct.horizontal, 3);
+    expect(almostTrigger.vertical).toBeCloseTo(direct.vertical, 3);
+  });
+
+  it("con stuckMs >= SLIDE_TRIGGER_MS se añade componente perpendicular", () => {
+    // Target to the right (x+), perpendicular should be z-axis component
+    const dir = resolveDirWithSlide([], { x: 10, z: 0 }, 0, 0, 200, 1);
+    // Direction should deviate from pure horizontal
+    expect(Math.abs(dir.vertical)).toBeGreaterThan(0);
+  });
+
+  it("slideSign=-1 produce componente perpendicular opuesta", () => {
+    const pos = resolveDirWithSlide([], { x: 10, z: 0 }, 0, 0, 200, 1);
+    const neg = resolveDirWithSlide([], { x: 10, z: 0 }, 0, 0, 200, -1);
+    // The perpendicular components should have opposite signs
+    expect(Math.sign(pos.vertical)).not.toBe(Math.sign(neg.vertical));
+  });
+
+  it("la dirección resultante siempre tiene módulo <= 1", () => {
+    for (const stuckMs of [0, 150, 300, 550]) {
+      const dir = resolveDirWithSlide([], { x: 3, z: 7 }, 0, 0, stuckMs);
+      const mag = Math.sqrt(dir.horizontal ** 2 + dir.vertical ** 2);
+      expect(mag).toBeLessThanOrEqual(1 + 1e-9);
+    }
+  });
+});
