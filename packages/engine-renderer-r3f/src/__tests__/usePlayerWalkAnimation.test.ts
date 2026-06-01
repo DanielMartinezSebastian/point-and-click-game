@@ -1,6 +1,7 @@
 import { describe, test, expect, beforeEach, vi } from "vitest";
 import type { PlayerWalkingState } from "@pointclick-engine/engine-core";
 import type { GameVec3 } from "@pointclick-engine/engine-core";
+import { buildCumulativeDistances, samplePathPosition } from "../hooks/usePlayerWalkAnimation";
 
 describe("usePlayerWalkAnimation", () => {
   describe("hook initialization", () => {
@@ -299,5 +300,91 @@ describe("usePlayerWalkAnimation", () => {
 
       expect(interpolated).toEqual([-5, 0, -5]);
     });
+  });
+});
+
+// ── Unit tests for path helpers ────────────────────────────────────────────
+
+describe("buildCumulativeDistances", () => {
+  test("single segment returns [0, length]", () => {
+    const pts: GameVec3[] = [[0, 0, 0], [3, 0, 4]]; // 3-4-5 triangle → dist=5
+    const d = buildCumulativeDistances(pts);
+    expect(d).toHaveLength(2);
+    expect(d[0]).toBe(0);
+    expect(d[1]).toBeCloseTo(5);
+  });
+
+  test("two equal segments accumulate correctly", () => {
+    const pts: GameVec3[] = [[0, 0, 0], [5, 0, 0], [10, 0, 0]];
+    const d = buildCumulativeDistances(pts);
+    expect(d[0]).toBe(0);
+    expect(d[1]).toBeCloseTo(5);
+    expect(d[2]).toBeCloseTo(10);
+  });
+
+  test("path with three waypoints — L-shape", () => {
+    const pts: GameVec3[] = [[0, 0, 0], [4, 0, 0], [4, 0, 3]]; // 4 + 3 = 7 total
+    const d = buildCumulativeDistances(pts);
+    expect(d[2]).toBeCloseTo(7);
+  });
+
+  test("single point returns [0]", () => {
+    const pts: GameVec3[] = [[1, 0, 2]];
+    const d = buildCumulativeDistances(pts);
+    expect(d).toEqual([0]);
+  });
+});
+
+describe("samplePathPosition", () => {
+  const pts: GameVec3[] = [[0, 0, 0], [10, 0, 0]]; // straight line along X
+  const dist = buildCumulativeDistances(pts);
+  const total = 10;
+
+  test("progress 0 returns start", () => {
+    const p = samplePathPosition(pts, dist, total, 0);
+    expect(p[0]).toBeCloseTo(0);
+    expect(p[2]).toBeCloseTo(0);
+  });
+
+  test("progress 1 returns end", () => {
+    const p = samplePathPosition(pts, dist, total, 1);
+    expect(p[0]).toBeCloseTo(10);
+    expect(p[2]).toBeCloseTo(0);
+  });
+
+  test("progress 0.5 returns midpoint", () => {
+    const p = samplePathPosition(pts, dist, total, 0.5);
+    expect(p[0]).toBeCloseTo(5);
+  });
+
+  test("three-point L-shaped path — midpoint is at corner, not across obstacle", () => {
+    // Path goes from (0,0,0) → corner (4,0,0) → (4,0,3)
+    // Segment 1 length=4, Segment 2 length=3. Total=7.
+    // At progress=4/7 the character should be exactly at the corner (4,0,0).
+    const lPts: GameVec3[] = [[0, 0, 0], [4, 0, 0], [4, 0, 3]];
+    const lDist = buildCumulativeDistances(lPts);
+    const lTotal = lDist[lDist.length - 1];
+
+    const atCorner = samplePathPosition(lPts, lDist, lTotal, 4 / 7);
+    expect(atCorner[0]).toBeCloseTo(4, 4);
+    expect(atCorner[2]).toBeCloseTo(0, 4);
+  });
+
+  test("three-point L-shaped path — halfway through second segment", () => {
+    const lPts: GameVec3[] = [[0, 0, 0], [4, 0, 0], [4, 0, 6]];
+    const lDist = buildCumulativeDistances(lPts);
+    const lTotal = lDist[lDist.length - 1]; // 4 + 6 = 10
+
+    // progress=0.7 → targetDist=7 → fully past segment 1 (4) → into seg 2 at dist 3 of 6 → z=3
+    const p = samplePathPosition(lPts, lDist, lTotal, 0.7);
+    expect(p[0]).toBeCloseTo(4);
+    expect(p[2]).toBeCloseTo(3);
+  });
+
+  test("total=0 returns last point without crash", () => {
+    const zeroPts: GameVec3[] = [[5, 0, 5], [5, 0, 5]];
+    const zeroDist = buildCumulativeDistances(zeroPts);
+    const p = samplePathPosition(zeroPts, zeroDist, 0, 0.5);
+    expect(p).toEqual([5, 0, 5]);
   });
 });

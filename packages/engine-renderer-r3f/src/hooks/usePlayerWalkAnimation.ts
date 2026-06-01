@@ -5,9 +5,8 @@ import { useFrame } from "@react-three/fiber";
 import type { GameVec3, PlayerWalkingState } from "@pointclick-engine/engine-core";
 import { useSceneStore } from "@pointclick-engine/engine-core";
 
-// Walk animation config
-const WALK_DURATION_MS = 2000; // 2 seconds to complete walk
-const COLLISION_CHECK_RADIUS = 0.5; // Collision radius around player
+/** World units per second at which the character walks. */
+const WALK_SPEED = 4.5;
 
 interface UsePlayerWalkAnimationResult {
   /** Current animated position (may differ from store position during walk) */
@@ -18,122 +17,78 @@ interface UsePlayerWalkAnimationResult {
   progress: number;
 }
 
-/**
- * Hook that smoothly animates player walking along a calculated path.
- *
- * - Interpolates position via useFrame
- * - Detects collisions and aborts if blocked
- * - Allows manual cancellation on user input
- * - Returns animated position for rendering
- *
- * Usage:
- * ```
- * const { animatedPosition, isWalking } = usePlayerWalkAnimation(
- *   playerPosition,
- *   walkingState
- * );
- * ```
- */
 export function usePlayerWalkAnimation(
   playerPosition: GameVec3,
   walkingState: PlayerWalkingState | null,
   onWalkAbort?: (reason: "user-input" | "collision" | "unreachable") => void,
-  onWalkComplete?: () => void
+  onWalkComplete?: () => void,
 ): UsePlayerWalkAnimationResult {
   const updateWalkProgress = useSceneStore((s) => s.updateWalkProgress);
-  const scene = useSceneStore((s) => s.scene);
 
-  // Animated position: either from path or current player position
   const animatedPositionRef = useRef<GameVec3>(playerPosition);
-  const lastPlayerPositionRef = useRef<GameVec3>(playerPosition);
-
-  // Track elapsed time for walk animation
   const elapsedRef = useRef(0);
-
-  // Keep walkingState in ref so useFrame always sees current value
   const walkingStateRef = useRef<PlayerWalkingState | null>(walkingState);
   const playerPositionRef = useRef<GameVec3>(playerPosition);
+  const onWalkCompleteRef = useRef(onWalkComplete);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _onWalkAbortRef = useRef(onWalkAbort);
 
-  // Update refs when props change
+  // Cache segment distances for the active walk. Recomputed whenever the walk identity changes.
+  const pathCacheRef = useRef<{
+    walkId: string;
+    distances: number[];
+    total: number;
+    durationMs: number;
+  } | null>(null);
+
   useEffect(() => {
     walkingStateRef.current = walkingState;
     playerPositionRef.current = playerPosition;
-  }, [walkingState, playerPosition]);
+    onWalkCompleteRef.current = onWalkComplete;
+    _onWalkAbortRef.current = onWalkAbort;
+  });
 
-  // Detect if user manually moved player (input override)
-  // But only check when NOT walking (during walk, position changes are from animation)
-  const lastWalkStateRef = useRef<PlayerWalkingState | null>(null);
-
-  useEffect(() => {
-    // Only detect input when NOT actively walking
-    if (walkingState?.isActive) {
-      lastWalkStateRef.current = walkingState;
-      lastPlayerPositionRef.current = playerPosition;
-      return;
-    }
-
-    const posChanged =
-      playerPosition[0] !== lastPlayerPositionRef.current[0] ||
-      playerPosition[2] !== lastPlayerPositionRef.current[2];
-
-    // If walk just started, ignore the position change (it's from scene transition)
-    const walkJustStarted = !lastWalkStateRef.current?.isActive && walkingState?.isActive;
-
-    if (posChanged && walkingState?.isActive && !walkJustStarted) {
-      // User input detected during walk → abort
-      onWalkAbort?.("user-input");
-      useSceneStore.getState().setPlayerWalkingState(null);
-    }
-
-    lastPlayerPositionRef.current = playerPosition;
-    lastWalkStateRef.current = walkingState;
-  }, [playerPosition, walkingState?.isActive, onWalkAbort]);
-
-  // Animation frame loop
   useFrame((_, delta) => {
-    const currentWalkingState = walkingStateRef.current;
-    const currentPlayerPosition = playerPositionRef.current;
+    const state = walkingStateRef.current;
 
-    if (!currentWalkingState?.isActive) {
-      // Not walking, use current position
-      animatedPositionRef.current = currentPlayerPosition;
+    if (!state?.isActive) {
+      animatedPositionRef.current = playerPositionRef.current;
       return;
     }
 
-    // console.log(`[usePlayerWalkAnimation] Walking, progress:`, currentWalkingState.progress);
-    elapsedRef.current += delta * 1000; // Convert to ms
-    const progress = Math.min(elapsedRef.current / WALK_DURATION_MS, 1);
+    const { pathPoints, targetPosition } = state;
+    if (pathPoints.length < 2) {
+      animatedPositionRef.current = playerPositionRef.current;
+      return;
+    }
 
-    // Interpolate position along path
-    if (currentWalkingState.pathPoints.length >= 2) {
-      const startPos = currentWalkingState.pathPoints[0];
-      const endPos = currentWalkingState.pathPoints[currentWalkingState.pathPoints.length - 1];
+    // Detect a new walk (different path or target) and reset elapsed time.
+    const walkId = `${pathPoints[0]?.join(",")}->${targetPosition.join(",")}`;
+    if (pathCacheRef.current?.walkId !== walkId) {
+      elapsedRef.current = 0;
+      const distances = buildCumulativeDistances(pathPoints);
+      const total = distances[distances.length - 1];
+      pathCacheRef.current = {
+        walkId,
+        distances,
+        total,
+        // Guard against zero-length paths to avoid division by zero.
+        durationMs: total > 0 ? (total / WALK_SPEED) * 1000 : 300,
+      };
+    }
 
-      const interpolated: GameVec3 = [
-        startPos[0] + (endPos[0] - startPos[0]) * progress,
-        startPos[1], // Y stays at ground level
-        startPos[2] + (endPos[2] - startPos[2]) * progress,
-      ];
+    const { distances, total, durationMs } = pathCacheRef.current!;
+    elapsedRef.current += delta * 1000;
+    const progress = Math.min(elapsedRef.current / durationMs, 1);
 
-      // Check collision with walls (simplified)
-      const collision = checkCollisionAtPosition(interpolated, scene);
-      if (collision) {
-        // Abort walk on collision
-        onWalkAbort?.("collision");
-        useSceneStore.getState().setPlayerWalkingState(null);
-        animatedPositionRef.current = playerPosition;
-        return;
-      }
+    animatedPositionRef.current = samplePathPosition(pathPoints, distances, total, progress);
+    updateWalkProgress(progress);
 
-      animatedPositionRef.current = interpolated;
-      updateWalkProgress(progress);
-
-      // Walk complete when progress reaches 1
-      if (progress >= 1) {
-        onWalkComplete?.();
-        useSceneStore.getState().setPlayerWalkingState(null);
-        elapsedRef.current = 0;
-      }
+    if (progress >= 1) {
+      onWalkCompleteRef.current?.();
+      useSceneStore.getState().setPlayerWalkingState(null);
+      elapsedRef.current = 0;
+      pathCacheRef.current = null;
     }
   });
 
@@ -144,37 +99,42 @@ export function usePlayerWalkAnimation(
   };
 }
 
-/**
- * Simplified collision check: see if position would collide with any wall.
- * (Note: This is a conservative check. Real collision would use physics engine.)
- */
-function checkCollisionAtPosition(
-  position: GameVec3,
-  scene: ReturnType<typeof useSceneStore.getState>["scene"]
-): boolean {
-  const [x, y, z] = position;
-  const buffer = COLLISION_CHECK_RADIUS;
+/** Returns cumulative straight-line distances for each point in the path, starting at 0. */
+export function buildCumulativeDistances(pathPoints: GameVec3[]): number[] {
+  const distances = [0];
+  for (let i = 1; i < pathPoints.length; i++) {
+    const dx = pathPoints[i][0] - pathPoints[i - 1][0];
+    const dz = pathPoints[i][2] - pathPoints[i - 1][2];
+    distances.push(distances[i - 1] + Math.sqrt(dx * dx + dz * dz));
+  }
+  return distances;
+}
 
-  // Check against all walls
-  for (const wall of scene.walls) {
-    const [wx, wy, wz] = wall.position;
-    const [hwx, hwy, hwz] = wall.halfSize;
+/** Samples a world position along the path at normalized progress in [0, 1]. */
+export function samplePathPosition(
+  pathPoints: GameVec3[],
+  distances: number[],
+  total: number,
+  progress: number,
+): GameVec3 {
+  if (total === 0 || pathPoints.length === 0) {
+    return pathPoints[pathPoints.length - 1] ?? [0, 0, 0];
+  }
 
-    // Conservative AABB check
-    const wallMinX = wx - hwx;
-    const wallMaxX = wx + hwx;
-    const wallMinZ = wz - hwz;
-    const wallMaxZ = wz + hwz;
-
-    if (
-      x > wallMinX - buffer &&
-      x < wallMaxX + buffer &&
-      z > wallMinZ - buffer &&
-      z < wallMaxZ + buffer
-    ) {
-      return true; // Collision detected
+  const targetDist = progress * total;
+  for (let i = 1; i < distances.length; i++) {
+    if (distances[i] >= targetDist) {
+      const segLen = distances[i] - distances[i - 1];
+      const t = segLen > 0 ? (targetDist - distances[i - 1]) / segLen : 0;
+      const a = pathPoints[i - 1];
+      const b = pathPoints[i];
+      return [
+        a[0] + (b[0] - a[0]) * t,
+        a[1],
+        a[2] + (b[2] - a[2]) * t,
+      ];
     }
   }
 
-  return false; // No collision
+  return pathPoints[pathPoints.length - 1];
 }

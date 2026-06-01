@@ -231,8 +231,22 @@ export function GameTouchSpriteRuntime({
   const setPlayerPosition = useSceneStore((s) => s.setPlayerPosition);
   const respawnSignal = useSceneStore((s) => s.respawnSignal);
 
+  // Keep a ref to walk state so the completion callback captures the latest value.
+  const playerWalkingStateRef = useRef(playerWalkingState);
+  useEffect(() => { playerWalkingStateRef.current = playerWalkingState; }, [playerWalkingState]);
+
+  // When the walk animation completes, teleport the physics body to the target
+  // so the sprite doesn't snap back to its original position.
+  const handleWalkComplete = useCallback(() => {
+    const target = playerWalkingStateRef.current?.targetPosition;
+    const body = characterBodyRef.current;
+    if (target && body) {
+      body.setTranslation({ x: target[0], y: target[1], z: target[2] }, true);
+    }
+  }, []);
+
   // Use walk animation if active, otherwise use current player position
-  const { animatedPosition, isWalking } = usePlayerWalkAnimation(playerPosition, playerWalkingState);
+  const { animatedPosition, isWalking } = usePlayerWalkAnimation(playerPosition, playerWalkingState, undefined, handleWalkComplete);
   const renderPosition = isWalking ? animatedPosition : playerPosition;
 
   const { setTarget, setRoute, cancelTarget, resolveDirection, registerProgress } = useClickToMoveController();
