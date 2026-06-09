@@ -25,15 +25,28 @@ manual (requieren `partykit dev` + navegador, no verificable headless).
 `itemClaim` (3), `presence`/throttle (1), `optimisticReconcile` (3), `multiplayerSession` (5 —
 replica world, bloquea private, anti-eco, presence join, propaga posición), `netAgnosticism` (1).
 
-## Escenarios manuales (pendientes de run con servidor)
+## Verificación en vivo (2026-06-10)
 
-Requieren `npm run party:dev` + `npm run dev` y dos pestañas en `/multiplayer`:
+Servidores levantados: PartyKit (`:1999`) + Next.js (`:3000`).
 
 | # | Escenario | Estado |
 |---|-----------|--------|
-| A | Presence por escena (avatares en misma escena) | ⏳ manual — lógica cubierta por `multiplayerSession.test.ts` |
-| E | Room lifecycle (código/join/solo/`N/4`/reset/cap 4) | ⏳ manual — lógica cubierta por `roomSession.test.ts` (cap 4 server-side en `party/multiplayer.ts`) |
+| — | Ruta `/multiplayer` renderiza (juego + RoomLobby) | ✅ verificado (screenshot) |
+| — | Crear room → WebSocket a PartyKit | ✅ `GET /parties/multiplayer/FK4CFY 101 Switching Protocols` |
+| E | Room lifecycle: código `FK4CFY`, `Jugadores 1/4`, "Faltan 3", nombre `Vecino-B9F`, reset | ✅ verificado (lobby) |
+| A | Presence por escena (2 avatares moviéndose) | ⏳ requiere 2ª pestaña interactiva — lógica cubierta por `multiplayerSession.test.ts` |
 | B/C/D | Puerta/llave/claim world compartido | ⏳ 2ª iteración (item-sync completo) |
+
+### Prod build (Vercel-ready)
+
+- `next build` → **EXIT 0**; `/multiplayer` listada como ruta estática prerenderizada.
+- TypeScript de build OK (los 10 errores tsc pre-existentes están en test files, no bloquean el build).
+- Despliegue documentado en `DEPLOY.md` (PartyKit deploy + `NEXT_PUBLIC_PARTYKIT_HOST` en Vercel).
+
+### Issue dev no bloqueante
+
+- Hydration mismatch en `InventoryUI` (`aria-label` i18n: clave cruda en SSR vs traducida en cliente).
+  **Pre-existente** (también en `/`), no relacionado con multijugador. Solo warning de dev.
 
 ## Notas de implementación (desviaciones del plan)
 
