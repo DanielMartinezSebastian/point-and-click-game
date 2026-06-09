@@ -110,20 +110,22 @@ import type {
  * Bus en memoria que conecta varios HeadlessMultiplayerAdapter (simula la red
  * en tests). Reenvía cada `send` a los demás adapters de la MISMA room.
  */
-export class InMemoryHub {
-  private peers = new Map<PlayerId, (m: NetEnvelope) => void>();
+interface HubPeer { room: string; inbound: (m: NetEnvelope) => void; }
 
-  register(id: PlayerId, inbound: (m: NetEnvelope) => void): () => void {
-    this.peers.set(id, inbound);
+export class InMemoryHub {
+  private peers = new Map<PlayerId, HubPeer>();
+
+  register(id: PlayerId, room: string, inbound: (m: NetEnvelope) => void): () => void {
+    this.peers.set(id, { room, inbound });
     return () => this.peers.delete(id);
   }
 
-  /** Fan-out a todos menos al emisor (sin self-echo). */
-  broadcast(from: PlayerId, room: string, message: NetEnvelope): void {
-    for (const [id, inbound] of this.peers) {
+  /** Fan-out a los peers de la MISMA room que el mensaje, menos al emisor. */
+  broadcast(from: PlayerId, _room: string, message: NetEnvelope): void {
+    for (const [id, peer] of this.peers) {
       if (id === from) continue;
-      if (message.room !== room) continue;
-      inbound(message);
+      if (peer.room !== message.room) continue; // aísla por room del receptor
+      peer.inbound(message);
     }
   }
 }
@@ -146,7 +148,7 @@ export class HeadlessMultiplayerAdapter implements MultiplayerPort {
   connect(opts: ConnectOptions): void {
     this.room = opts.room;
     this.connected = true;
-    this.unregister = this.hub.register(this.selfId, (m) => {
+    this.unregister = this.hub.register(this.selfId, this.room, (m) => {
       this.msgHandlers.forEach((h) => h(m));
     });
     this.emitStatus({ state: "connected", selfId: this.selfId });

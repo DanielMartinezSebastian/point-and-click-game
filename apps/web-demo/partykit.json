@@ -1,0 +1,7 @@
+{
+  "$schema": "https://www.partykit.io/schema.json",
+  "name": "pointclick-multiplayer",
+  "main": "party/multiplayer.ts",
+  "parties": { "multiplayer": "party/multiplayer.ts" },
+  "compatibilityDate": "2024-01-01"
+}

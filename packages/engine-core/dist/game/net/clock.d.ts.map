@@ -1,0 +1,1 @@
+{"version":3,"file":"clock.d.ts","sourceRoot":"","sources":["../../../src/game/net/clock.ts"],"names":[],"mappings":"AAIA,qBAAa,GAAG;IACd,OAAO,CAAC,YAAY,CAAK;IACzB,OAAO,CAAC,OAAO,CAAK;IAEpB,oEAAoE;IACpE,GAAG,CAAC,IAAI,GAAE,MAAmB,GAAG,MAAM;IAUtC,2EAA2E;IAC3E,MAAM,CAAC,QAAQ,EAAE,MAAM,EAAE,IAAI,GAAE,MAAmB,GAAG,MAAM;CAM5D"}

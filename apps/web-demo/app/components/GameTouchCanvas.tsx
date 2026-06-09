@@ -53,6 +53,8 @@ const EMPTY_TRANSITIONS: GameSceneTransition[] = [];
 type GameTouchCanvasProps = {
   debug?: boolean;
   onRuntimeEvent?: (event: RuntimeEvent) => void;
+  /** Contenido extra dentro del mundo físico (p.ej. <RemotePlayers/> en /multiplayer). */
+  extraCanvasChildren?: React.ReactNode;
 };
 
 /**
@@ -69,6 +71,7 @@ function SceneReadyReporter({ onReady }: { onReady: () => void }) {
 export default function GameTouchCanvas({
   debug: debugOverride,
   onRuntimeEvent,
+  extraCanvasChildren,
 }: GameTouchCanvasProps = {}) {
   const selectedCharacter: GameCharacterName = "Dave";
   const [sceneReady, setSceneReady] = useState(false);
@@ -451,6 +454,7 @@ export default function GameTouchCanvas({
             debug={runtimeDebug}
             onTransitionTriggered={handleTransitionTriggered}
           />
+          {extraCanvasChildren}
         </Physics>
       </Canvas>
 

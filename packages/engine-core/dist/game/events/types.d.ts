@@ -1,4 +1,6 @@
 import type { AudioSettings, GameScene, GameVec3, Locale, SoundCategory } from "../types";
+import type { PlayerDescriptor } from "../net/playerIdentity";
+import type { ConnectionStatus, PlayerId } from "../../ports/multiplayer";
 /**
  * Union exhaustiva de todos los eventos que el motor puede emitir.
  * Naming: <domain>:<action> (ver ADR-0006).
@@ -84,6 +86,15 @@ export type GameEvent = {
     type: "i18n:dictionaryUpdated";
     locale: Locale;
     keysAdded: number;
+} | {
+    type: "net:playerJoined";
+    player: PlayerDescriptor;
+} | {
+    type: "net:playerLeft";
+    playerId: PlayerId;
+} | {
+    type: "net:status";
+    status: ConnectionStatus;
 };
 export type GameEventType = GameEvent["type"];
 export type GameEventHandler<T extends GameEventType = GameEventType> = (event: Extract<GameEvent, {

@@ -57,6 +57,15 @@ export type GameCommand = {
     type: "i18n:registerDictionary";
     locale: Locale;
     dict: DialogDictionary;
+} | {
+    type: "net:join";
+    room: string;
+    displayName?: string;
+} | {
+    type: "net:leave";
+} | {
+    type: "net:setName";
+    displayName: string;
 };
 export type GameCommandType = GameCommand["type"];
 export {};
