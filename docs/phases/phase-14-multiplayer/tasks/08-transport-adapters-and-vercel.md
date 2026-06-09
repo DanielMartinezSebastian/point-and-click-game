@@ -1,20 +1,22 @@
 # Task 08-transport-adapters-and-vercel
 
-**Effort**: 2 days | **Blocks**: 10 | **Blocked by**: 01
+**Effort**: 2 days | **Blocks**: 10,11 | **Blocked by**: 01
 
 ---
 
 ## 🎯 Objetivo
 
-Implementar adapters reales del `MultiplayerPort` (fuera del core) y documentar el despliegue en
-Vercel/serverless (requisito 3). Mínimo: un adapter recomendado funcional + la guía de proveedores.
+Implementar el adapter real del `MultiplayerPort` sobre **PartyKit** (elección confirmada,
+decisión 1 — server-authoritative) fuera del core, y documentar el despliegue en Vercel/serverless
+(requisito 3).
 
 ---
 
 ## ✅ Success Criteria
 
-- [ ] Adapter **PartyKit** (recomendado) implementa `MultiplayerPort`: room = partida/escena, fan-out, snapshot al unirse
-- [ ] Stub/segundo adapter documentado (Liveblocks **o** WS microservicio) con su trade-off
+- [ ] Adapter **PartyKit** (elección por defecto) implementa `MultiplayerPort`: room = partida (por código), fan-out, snapshot al unirse, autoridad server-side
+- [ ] Capacidad de room aplicada en el server (límite 4, ver task 10): 5º join → status `room-full`
+- [ ] Liveblocks / WS microservicio quedan documentados como alternativas detrás del mismo port (sin implementar)
 - [ ] Guía de despliegue: por qué la conexión persistente NO vive en funciones Vercel y dónde sí
 - [ ] El adapter vive fuera de `engine-core` (no rompe agnosticismo); se inyecta en `createMultiplayerRuntime`
 - [ ] Smoke test: dos clientes reales intercambian presence + un evento world a través del adapter

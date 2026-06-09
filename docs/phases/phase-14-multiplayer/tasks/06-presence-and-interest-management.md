@@ -1,6 +1,6 @@
 # Task 06-presence-and-interest-management
 
-**Effort**: 1.5 days | **Blocks**: 07,10 | **Blocked by**: 04
+**Effort**: 1.5 days | **Blocks**: 07,11 | **Blocked by**: 04
 
 ---
 

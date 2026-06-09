@@ -1,6 +1,6 @@
 # ADR-0008: Multiplayer Architecture (agnostic transport + state partition)
 
-**Estado**: Propuesto | **Fecha**: 2026-06-09 | **Autores**: Daniel Martínez Sebastián
+**Estado**: Aceptado (decisiones confirmadas 2026-06-09) | **Fecha**: 2026-06-09 | **Autores**: Daniel Martínez Sebastián
 
 ## Context
 
@@ -24,6 +24,14 @@ El motor ya tiene la base ideal (ver [ADR-0006](0006-command-event-architecture.
 `GameCommand` (entrada serializable) + `GameEvent` (salida serializable) + `EventBus` +
 `CommandHandler`, todos sin React/R3F. Multiplayer se construye **encima** de ese contrato,
 no lo reemplaza.
+
+### Decisiones del owner (2026-06-09)
+
+1. **Autoridad → PartyKit (server-authoritative)**. Elección fija.
+2. **Sesiones con rooms por código**, world efímero en memoria (serializable para persistir luego).
+   Código guardado en localStorage (cliente), solo-play permitido con aviso de plazas, reset a room nueva.
+3. **Límite 4 jugadores** por room.
+4. **Identidad anónima con nombre aleatorio cambiable** (`net:setName`); sin login por ahora.
 
 ## Decision
 
@@ -76,11 +84,11 @@ ve para todos.
 
 ### 4. Modelo de autoridad: dos topologías, mismo port
 
-Ambas se documentan y se soportan detrás del mismo `MultiplayerPort`:
+El port soporta ambas; **se elige server-authoritative con PartyKit** por defecto (decisión 1):
 
 - **Server-authoritative (relay/host)**: un proceso valida mutaciones del world y es la fuente
   de verdad; los clientes mandan *intents*, reciben eventos confirmados. Resuelve conflictos y
-  anti-cheat de forma natural. Recomendado para mundos persistentes.
+  anti-cheat de forma natural, y hace de host de la room. **ELEGIDO** (PartyKit / Durable Object).
 - **Optimista / CRDT-lite**: world como mapa de registros *last-write-wins* por
   `(entityId, field)` con reloj lógico (HLC/Lamport). No requiere servidor de juego dedicado;
   encaja con almacenamiento de proveedores realtime (Liveblocks/Yjs). El claim de ítems usa
@@ -88,6 +96,14 @@ Ambas se documentan y se soportan detrás del mismo `MultiplayerPort`:
 
 El core no impone la elección: la autoridad vive en el adapter/servidor; el core solo aplica
 eventos confirmados y predice localmente (ver task 09).
+
+### 4b. Rooms / sesiones (decisión 2)
+
+- Room identificada por un **código compartible** (crear genera el código; unirse lo introduce).
+- **World efímero** en memoria de la room (PartyKit); serializable → persistencia futura sin rediseño.
+- El **código se persiste en localStorage** del cliente (platform adapter del app, **no** en core).
+- **Solo-play** permitido (1 jugador opera el world); UI avisa de plazas libres (`N/4`).
+- **Reset room** = nueva room vacía. **Capacidad 4**: el 5º join se rechaza (`room-full`).
 
 ### 5. Interest management para minimizar latencia/ancho de banda
 
@@ -101,7 +117,8 @@ eventos confirmados y predice localmente (ver task 09).
 
 `PlayerDescriptor = { playerId, displayName, characterId, sceneId, ... }`. `characterId`
 existe desde el día 1 (hoy un único valor por defecto) para no romper el protocolo cuando se
-añadan personajes seleccionables.
+añadan personajes seleccionables. `displayName` arranca con un **nombre anónimo aleatorio** y es
+**cambiable** por el jugador (`net:setName`); sin login/cuenta por ahora (decisión 4).
 
 ## Consequences
 

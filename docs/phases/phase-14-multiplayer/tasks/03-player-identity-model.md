@@ -1,6 +1,6 @@
 # Task 03-player-identity-model
 
-**Effort**: 0.5 day | **Blocks**: 04,07 | **Blocked by**: 01
+**Effort**: 0.5 day | **Blocks**: 04,07,10 | **Blocked by**: 01
 
 ---
 
@@ -17,6 +17,8 @@ remotos (presence).
 - [ ] `src/game/net/playerIdentity.ts`: `PlayerId`, `CharacterId`, `PlayerDescriptor`
 - [ ] `PlayerDescriptor = { playerId, displayName, characterId, sceneId, position, action }`
 - [ ] `DEFAULT_CHARACTER_ID` constante (el único personaje actual)
+- [ ] **Nombre anónimo aleatorio** (decisión 4): `generateRandomName()` (p.ej. "Viajero-A3F") asignado por defecto
+- [ ] **Nombre cambiable**: command `net:setName` que actualiza `displayName` y lo difunde como presence (sin cuenta/login por ahora)
 - [ ] `src/game/state/remotePlayersStore.ts`: store agnóstico (estilo `placedItemsStore`) con `upsert(descriptor)`, `remove(playerId)`, `getInScene(sceneId)`, `getAll()`, `reset()`
 - [ ] Tests del store (upsert/remove/filtrado por escena)
 - [ ] Exportados desde `src/index.ts`
@@ -28,7 +30,9 @@ remotos (presence).
 ### Step 1: Identidad
 `PlayerDescriptor` debe ser serializable (entra en `NetEnvelope.payload` como presence).
 `characterId: CharacterId` siempre presente; default `DEFAULT_CHARACTER_ID`. No añadir UI de
-selección (out of scope), solo reservar el campo en el protocolo.
+selección de personaje (out of scope), solo reservar el campo en el protocolo. `displayName`
+arranca con `generateRandomName()`; el jugador puede cambiarlo (`net:setName`). Identidad
+anónima por sesión — sin login/cuenta (ver decisión 4 del README).
 
 ### Step 2: remotePlayersStore
 Crea un store **factory** agnóstico (no React, no zustand global) como `createPlacedItemsStore`:

@@ -1,6 +1,6 @@
 # Task 07-renderer-remote-avatars
 
-**Effort**: 1.5 days | **Blocks**: 10 | **Blocked by**: 03,06
+**Effort**: 1.5 days | **Blocks**: 11 | **Blocked by**: 03,06
 
 ---
 

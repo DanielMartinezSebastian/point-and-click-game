@@ -130,7 +130,7 @@ apunte a un servicio externo). El core es indiferente a esto.
 
 | Adapter | Topología | Vercel-friendly | Notas |
 |---------|-----------|-----------------|-------|
-| **PartyKit** (recomendado) | server-authoritative (Durable Objects, Cloudflare) | ✅ (servicio aparte) | room = escena/partida; barato; baja latencia edge |
+| **PartyKit** (✅ ELEGIDO) | server-authoritative (Durable Objects, Cloudflare) | ✅ (servicio aparte) | room = partida (por código); host + autoridad; cap 4; baja latencia edge |
 | **Liveblocks** | CRDT/storage + presence | ✅ | presence integrada; storage = world LWW; menos control de lógica server |
 | **Ably / Pusher** | pub/sub gestionado | ✅ | simple; tú resuelves autoridad/conflictos |
 | **Supabase Realtime** | pub/sub + Postgres | ✅ | persistencia world en Postgres gratis |
@@ -146,6 +146,20 @@ proveedor no toca core ni demo.
 3. Presence shardeada por escena + throttle ~10–15Hz + interpolación en cliente.
 4. HLC para LWW determinista sin relojes sincronizados.
 5. Reconexión: re-pedir snapshot, reconciliar contra estado optimista local.
+
+## 7. Room & session model (decisiones confirmadas)
+
+- **PartyKit** es el adapter/host por defecto (server-authoritative). Una room = una partida.
+- **Código de room** compartible: un cliente crea (genera código) u otro se une (introduce código).
+  El 5º join se rechaza (`ConnectionStatus { state: "disconnected", reason: "room-full" }`).
+- **Límite 4 jugadores** por room. A este tamaño el tráfico de presence es despreciable.
+- **World efímero** en memoria de la room (no persistente entre sesiones), pero **serializable**:
+  añadir persistencia server-side luego es "guardar/cargar el blob", sin rediseño.
+- **Código en localStorage** (platform adapter del app, **no** en core — Regla de Oro): se reusa
+  por defecto al volver; opción de "olvidar" para empezar limpio.
+- **Solo-play**: la room opera con 1 jugador; la UI avisa de plazas libres (`N/4`).
+- **Reset room**: genera una room nueva vacía (juego en solitario hasta que entre alguien).
+- **Identidad** anónima con nombre aleatorio cambiable (`net:setName`); sin login (futuro).
 
 ## Ver también
 

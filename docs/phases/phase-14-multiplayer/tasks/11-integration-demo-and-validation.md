@@ -1,6 +1,6 @@
-# Task 10-integration-demo-and-validation
+# Task 11-integration-demo-and-validation
 
-**Effort**: 1.5 days | **Blocks**: — | **Blocked by**: 04,06,07,08 (05,09 para validación completa)
+**Effort**: 1.5 days | **Blocks**: — | **Blocked by**: 04,06,07,08,10 (05,09 para validación completa)
 
 ---
 
@@ -19,6 +19,7 @@ cerrar el gate de validación de la fase.
 - [ ] **Escenario B (puerta world)**: A abre puerta → B la ve abierta
 - [ ] **Escenario C (llave private↔world)**: A recoge llave → B no la ve; A la suelta en zona permitida → B la ve
 - [ ] **Escenario D (claim)**: dos a la vez sobre el mismo ítem → un único ganador, el otro rollback
+- [ ] **Escenario E (room lifecycle)**: crear room → compartir código → 2º jugador se une; solo-play con aviso `N/4`; reset a room nueva; 5º join rechazado (`room-full`)
 - [ ] Gate: test de agnosticismo del core verde; suite single-player sin regresión; build OK
 - [ ] `validation-report.md` con resultados de los 4 escenarios
 

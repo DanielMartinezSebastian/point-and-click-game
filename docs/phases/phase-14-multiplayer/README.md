@@ -28,10 +28,10 @@ Este README es el plan de ejecución. **Léelos antes de empezar una tarea.**
 
 | Requisito del owner | Solución de diseño | Tareas |
 |---------------------|--------------------|--------|
-| **1. Agnóstico del transporte** | `MultiplayerPort` (igual que audio/i18n). Adapters fuera del core. | 01, 08 |
+| **1. Agnóstico del transporte** | `MultiplayerPort` (igual que audio/i18n). Adapter **PartyKit** fuera del core. | 01, 08 |
 | **2. Pantalla por jugador + estado world compartido** | Partición `world` / `presence` / `private` + capa de replicación + clasificación de eventos | 02, 03, 04, 06, 07 |
-| **3. Vercel / serverless** | Conexión persistente vive en el adapter (PartyKit/Liveblocks/microservicio), no en funciones serverless. Deltas + interest management. | 06, 08 |
-| **4. Multi-character futuro** | `characterId` en `PlayerDescriptor` desde el día 1 | 03, 07 |
+| **3. Vercel / serverless** | Conexión persistente en PartyKit (no en funciones serverless). Rooms por código, deltas + interest management. | 06, 08, 10 |
+| **4. Multi-character futuro** | `characterId` en `PlayerDescriptor` desde el día 1; nombre anónimo aleatorio cambiable | 03, 07 |
 
 ---
 
@@ -52,14 +52,14 @@ Este README es el plan de ejecución. **Léelos antes de empezar una tarea.**
 ```
 src/ports/multiplayer.ts                 NEW  MultiplayerPort + NetEnvelope + tipos
 src/ports/headlessMultiplayer.ts         NEW  loopback en memoria + InMemoryHub (tests)
-src/game/net/playerIdentity.ts           NEW  PlayerDescriptor, PlayerId, characterId
+src/game/net/playerIdentity.ts           NEW  PlayerDescriptor, PlayerId, characterId, generateRandomName
 src/game/net/eventClassification.ts      NEW  registry world/presence/private
 src/game/net/MultiplayerSession.ts       NEW  replicación EventBus/CommandHandler ↔ port
 src/game/net/clock.ts                    NEW  HLC (hybrid logical clock) para LWW
 src/game/net/worldState.ts               NEW  LWW register map (modo CRDT-lite)
 src/game/state/remotePlayersStore.ts     NEW  presence de otros jugadores (no React)
 src/game/events/types.ts                 EDIT net:* events (player joined/left, status)
-src/game/commands/types.ts               EDIT net:* commands (join/leave/claim)
+src/game/commands/types.ts               EDIT net:* commands (join/leave/claim/setName)
 src/index.ts                             EDIT exports públicos
 ```
 
@@ -69,17 +69,19 @@ src/net/RemotePlayers.tsx                NEW  dibuja avatares de otros (presence
 src/net/useRemotePlayerInterpolation.ts  NEW  suavizado de posición
 ```
 
-### Adapters (fuera del core — paquete/módulo aparte)
+### Adapter PartyKit (fuera del core — elección por defecto)
 ```
-adapters/partykit/   (recomendado)       NEW  implementa MultiplayerPort
-adapters/liveblocks/                     NEW  presence + storage LWW
-adapters/ws-relay/   (microservicio)     NEW  server-authoritative propio
+adapters/partykit/server.ts              NEW  room por código, autoridad world, cap 4
+adapters/partykit/client.ts              NEW  implementa MultiplayerPort
+adapters/liveblocks|ws-relay/            DOC  alternativas documentadas (no implementadas)
 ```
 
 ### Demo (`apps/web-demo`)
 ```
-app/lib/net/createMultiplayerRuntime.ts  NEW  cablea runtime + session + adapter
-app/components/RemotePlayerLabel.tsx      NEW  nombre/etiqueta sobre avatares remotos
+app/lib/net/createMultiplayerRuntime.ts  NEW  cablea runtime + session + adapter PartyKit
+app/lib/net/roomCodeStorage.ts           NEW  persistencia del código en localStorage (platform)
+app/components/RoomLobby.tsx             NEW  crear/unirse por código, aviso N/4, reset room
+app/components/RemotePlayerLabel.tsx      NEW  nombre (editable) sobre avatares remotos
 ```
 
 ---
@@ -95,23 +97,25 @@ app/components/RemotePlayerLabel.tsx      NEW  nombre/etiqueta sobre avatares re
 - [ ] [07-renderer-remote-avatars](tasks/07-renderer-remote-avatars.md)
 - [ ] [08-transport-adapters-and-vercel](tasks/08-transport-adapters-and-vercel.md)
 - [ ] [09-optimistic-prediction-reconciliation](tasks/09-optimistic-prediction-reconciliation.md)
-- [ ] [10-integration-demo-and-validation](tasks/10-integration-demo-and-validation.md)
+- [ ] [10-room-session-lifecycle](tasks/10-room-session-lifecycle.md)
+- [ ] [11-integration-demo-and-validation](tasks/11-integration-demo-and-validation.md)
 
 ---
 
 ## 🚦 Orden de ejecución y dependencias
 
 ```
-01 ─► 02 ─► 04 ─► 06 ─► 07
-        │     │
-        └► 03 ┘     05 ─► 09
-                          │
-08 (paralelo desde 01) ───┴──► 10 (validación final)
+01 ─► 02 ─► 04 ─► 06 ─► 07 ─────────────────┐
+        │     │                              │
+        └► 03 ┘     05 ─► 09                 ▼
+              │                       11 (validación final)
+08 ─► 10 ─────┴──────────────────────────────┘
+(08 paralelo desde 01; 10 = room/lobby)
 ```
 
-- **Iteración mínima entregable (MVP)**: 01 → 02 → 03 → 04 → 06 → 07 → 08(headless+1 adapter) → 10.
-  Da presence + world compartido con un adapter real. Autoridad/conflictos (05) y predicción (09)
-  pueden ir en una segunda iteración.
+- **Iteración mínima entregable (MVP)**: 01 → 02 → 03 → 04 → 06 → 07 → 08(PartyKit) → 10 → 11.
+  Da presence + world compartido + rooms por código con un adapter real. Autoridad/conflictos (05)
+  y predicción (09) pueden ir en una segunda iteración.
 
 ---
 
@@ -121,20 +125,38 @@ app/components/RemotePlayerLabel.tsx      NEW  nombre/etiqueta sobre avatares re
 - [ ] Jugador A abre una puerta → B la ve abierta (world compartido).
 - [ ] Jugador A recoge una llave → B deja de verla; A la suelta en zona permitida → B la ve.
 - [ ] Dos jugadores intentan el mismo ítem a la vez → solo uno lo obtiene; el otro recibe rechazo.
-- [ ] El core sigue **sin** importar red/`window` (test de agnosticismo verde).
+- [ ] Crear room genera un **código**; otro jugador se une con ese código; **localStorage** lo recuerda.
+- [ ] **Solo-play** funciona; UI avisa de plazas libres (`N/4`); **reset** arranca una room nueva.
+- [ ] **5º jugador** rechazado (`room-full`); límite de 4 aplicado en el server.
+- [ ] El core sigue **sin** importar red/`window`/localStorage (test de agnosticismo verde).
 - [ ] El juego funciona single-player si no se configura `MultiplayerPort` (no regresión).
-- [ ] Demo desplegable en Vercel con un adapter externo documentado.
+- [ ] Demo desplegable en Vercel con PartyKit como adapter externo documentado.
 - [ ] 100% tests passing.
 
 ---
 
-## ❓ Open questions
+## ✅ Decisiones tomadas (2026-06-09)
 
-1. ¿MVP server-authoritative (PartyKit) o CRDT-lite (Liveblocks) como camino por defecto?
-2. ¿Persistencia del world entre sesiones (reiniciar partida) o efímera por room?
-3. ¿Límite de jugadores por room/escena? (afecta fan-out de presence)
-4. ¿Reconciliación de inventario si A y B sueltan en la misma celda a la vez?
-5. ¿Identidad: anónima por sesión o cuenta persistente?
+Las open questions iniciales quedaron resueltas por el owner:
+
+1. **Autoridad → PartyKit (server-authoritative)**. Fijo: cambiar de modelo de autoridad después
+   es caro. Liveblocks/WS quedan como alternativas documentadas detrás del mismo port.
+2. **Sesiones con rooms por código (world efímero en memoria)**:
+   - Cada cliente puede **crear** una room (genera un **código** compartible) o **unirse** con un código.
+   - El código se **guarda en localStorage** (platform adapter del app, NO en core) y se reusa por
+     defecto al volver. Si el otro player no está, se puede **continuar en solitario**, pero la UI
+     **avisa de plazas libres** (`N/4`).
+   - **Reset room**: generar una room nueva (vacía) y jugar en solitario hasta que entre alguien.
+   - El world es **efímero por room** (en memoria de PartyKit), pero serializable para añadir
+     persistencia server-side más adelante sin rediseño.
+3. **Límite: 4 jugadores por room**. El 5º join se rechaza (`room-full`). Tráfico de presence
+   despreciable a este tamaño.
+4. **Identidad anónima con nombre aleatorio** (p.ej. "Viajero-A3F"), **cambiable** por el jugador
+   (`net:setName`). Sin login/cuenta por ahora; reservado para una fase futura.
+
+> Detalle del ciclo de vida de room en [task 10](tasks/10-room-session-lifecycle.md). El conflicto
+> de inventario concurrente (antigua Q4) se resuelve vía claim server-authoritative en
+> [task 05](tasks/05-authority-and-conflict-resolution.md).
 
 ---
 
@@ -152,3 +174,4 @@ app/components/RemotePlayerLabel.tsx      NEW  nombre/etiqueta sobre avatares re
 | Fecha | Acción |
 |-------|--------|
 | 2026-06-09 | Phase 14 planning — multiplayer agnóstico (ADR-0008 + arquitectura 09) |
+| 2026-06-09 | Decisiones del owner: PartyKit, rooms por código (efímero+localStorage, solo/reset), cap 4, nombre anónimo cambiable. Nueva task 10 (room lifecycle); integración → 11 |

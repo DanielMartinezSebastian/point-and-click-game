@@ -1,6 +1,6 @@
 # Task 09-optimistic-prediction-reconciliation
 
-**Effort**: 1.5 days | **Blocks**: 10 | **Blocked by**: 05
+**Effort**: 1.5 days | **Blocks**: 11 | **Blocked by**: 05
 
 ---
 
