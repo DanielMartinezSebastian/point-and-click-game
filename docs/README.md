@@ -14,6 +14,7 @@ Diseño del sistema. Lee antes de tocar arquitectura.
 - [`architecture/04-platform-ports.md`](architecture/04-platform-ports.md) — Adapters web (storage, clipboard, timer)
 - [`architecture/05-bidirectional-communication.md`](architecture/05-bidirectional-communication.md) — Commands & Events API (web ↔ juego)
 - [`architecture/06-renderer-implementation-guide.md`](architecture/06-renderer-implementation-guide.md) — Cómo escribir un renderer alternativo
+- [`architecture/09-multiplayer.md`](architecture/09-multiplayer.md) — Multijugador agnóstico (port + partición world/presence/private)
 
 ---
 
@@ -41,6 +42,7 @@ Trabajo actual y futuro. Una fase = un directorio con tareas modulares.
 - [`phases/phase-7-walls-first-class/`](phases/phase-7-walls-first-class/) — ✅ Completed: Walls as first-class scene elements
 - [`phases/phase-8-scene-transitions/`](phases/phase-8-scene-transitions/) — ✅ Completed: Scene transitions (collision + item-drop)
 - [`phases/phase-9-placed-items-agnóstic/`](phases/phase-9-placed-items-agnóstic/) — ✅ Phases A-C: Placed items refactoring to core (types, dialog keys, stores)
+- [`phases/phase-14-multiplayer/`](phases/phase-14-multiplayer/) — 📋 Planning: Multijugador en tiempo real, agnóstico de transporte
 
 ---
 
