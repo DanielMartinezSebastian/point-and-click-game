@@ -6,59 +6,160 @@
 
 ## 🎯 Objetivo
 
-Implementar el ciclo de vida de **room/partida** según las decisiones tomadas: código de room
-compartible, join por código, persistencia del código en el cliente (localStorage), juego en
-solitario con aviso de plazas libres, reset a una room nueva, y límite de **4 jugadores**.
+Ciclo de vida de room según decisiones: código compartible, join por código, persistencia en
+localStorage, solo-play con aviso `N/4`, reset a room nueva, límite 4. Lógica en el **app**
+(platform), el core sigue agnóstico.
 
-> El core sigue agnóstico: la persistencia en localStorage es un **platform adapter** del app
-> (no entra en `engine-core`). PartyKit hace de autoridad y aplica el límite de capacidad.
+---
+
+## 📁 Archivos
+
+- **CREAR** `apps/web-demo/app/lib/net/roomCode.ts`
+- **CREAR** `apps/web-demo/app/lib/net/roomCodeStorage.ts`
+- **CREAR** `apps/web-demo/app/lib/net/roomSession.ts`
+- **CREAR** `apps/web-demo/app/lib/net/__tests__/roomSession.test.ts`
 
 ---
 
 ## ✅ Success Criteria
 
-- [ ] **Código de room** generado (corto, compartible, p.ej. 6 chars) al crear partida
-- [ ] **Join por código**: introducir un código une a esa room si existe y no está llena
-- [ ] **Persistencia en localStorage** (app, no core): el último código se guarda y se reusa por defecto al volver
-- [ ] **Solo play**: una room con 1 jugador funciona; el world es operativo en solitario
-- [ ] **Aviso de plazas**: UI muestra `N/4` jugadores y advierte cuando faltan players
-- [ ] **Reset room**: acción que genera una room nueva (vacía) y deja al jugador solo hasta que entre otro
-- [ ] **Capacidad 4**: el 5º intento de join se rechaza con `ConnectionStatus { state: "disconnected", reason: "room-full" }`
-- [ ] Reconexión: al reabrir con el código guardado, se reentra a la misma room (estado world intacto si sigue viva)
+- [ ] `generateRoomCode()` → 6 chars legibles (sin 0/O/1/I); `isValidRoomCode` valida
+- [ ] `createRoomCodeStorage(storage)` con `load/save/clear` sobre `StoragePort`
+- [ ] `createRoomSession` expone `code`, `create()`, `join(code)`, `reset()`, `capacity` (4), `count(remoteN)`
+- [ ] `reset()` genera código nuevo y persiste; permite solo-play
+- [ ] `MAX_PLAYERS = 4`; helper `isFull(remoteN)` y `freeSlots(remoteN)`
+- [ ] Tests verdes
 
 ---
 
-## 📝 Instructions
+## 📝 Step 1 — `app/lib/net/roomCode.ts`
 
-### Step 1: PartyKit room (autoridad + capacidad)
-El servidor PartyKit usa el código como `room id`. Mantiene el estado `world` en memoria
-(efímero por room, ver decisión 2) y aplica el cap de 4: rechaza conexiones por encima del
-límite con un status `room-full`. Expone presence count.
+```ts
+const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sin 0/O/1/I ambiguos
+export const ROOM_CODE_LENGTH = 6;
 
-### Step 2: Room code + join
-`generateRoomCode()` (legible, sin caracteres ambiguos). Flujo de la app: "Crear partida"
-(genera código) / "Unirse" (introduce código). El código viaja en `connect({ room })` del
-`MultiplayerPort`.
+export function generateRoomCode(rng: () => number = Math.random): string {
+  let out = "";
+  for (let i = 0; i < ROOM_CODE_LENGTH; i++) out += ALPHABET[Math.floor(rng() * ALPHABET.length)];
+  return out;
+}
+export function isValidRoomCode(code: string): boolean {
+  return new RegExp(`^[${ALPHABET}]{${ROOM_CODE_LENGTH}}$`).test(code.toUpperCase());
+}
+export function normalizeRoomCode(code: string): string { return code.trim().toUpperCase(); }
+```
 
-### Step 3: Persistencia local (platform adapter)
-En el app/demo (`app/lib/platform-web.ts` o similar), guardar el último `roomCode` en
-localStorage y precargarlo al arrancar. **No tocar engine-core** (Regla de Oro). Al reabrir, si
-hay código guardado → reentrar; permitir "salir/olvidar" para empezar limpio.
+## 📝 Step 2 — `app/lib/net/roomCodeStorage.ts`
 
-### Step 4: Solo play, aviso y reset
-La sesión funciona con 1 jugador (el world es operativo en solitario). Derivar `N/4` de la
-presence y mostrar aviso de plazas libres. "Reset room" = desconectar + `generateRoomCode()`
-nuevo + reconectar a la room vacía. Documentar qué pasa con el world al resetear (nuevo = limpio).
+```ts
+import type { StoragePort } from "../platform-web";
 
-### Step 5: Testing
-`__tests__/roomLifecycle.test.ts` (lógica testeable sin red, con `InMemoryHub`): capacidad 4
-rechaza el 5º; solo-play opera el world; reset arranca world limpio. La persistencia localStorage
-se valida en el smoke test de la demo (task 11).
+export const ROOM_CODE_STORAGE_KEY = "pce:multiplayer:roomCode";
 
----
+/** Persiste el último código de room (reutilizable al volver). */
+export function createRoomCodeStorage(storage: StoragePort) {
+  return {
+    load: (): string | null => storage.getItem(ROOM_CODE_STORAGE_KEY),
+    save: (code: string): void => storage.setItem(ROOM_CODE_STORAGE_KEY, code),
+    clear: (): void => storage.removeItem(ROOM_CODE_STORAGE_KEY),
+  };
+}
+```
+
+## 📝 Step 3 — `app/lib/net/roomSession.ts`
+
+```ts
+import { generateRoomCode, normalizeRoomCode, isValidRoomCode } from "./roomCode";
+import { createRoomCodeStorage } from "./roomCodeStorage";
+import type { StoragePort } from "../platform-web";
+
+export const MAX_PLAYERS = 4;
+
+export interface RoomSession {
+  /** Código activo (null si aún no se ha creado/unido). */
+  getCode: () => string | null;
+  /** Crea una room nueva (genera código), la persiste y la devuelve. */
+  create: () => string;
+  /** Une a un código existente (valida + persiste). Lanza si inválido. */
+  join: (code: string) => string;
+  /** Reset: nueva room vacía (solo-play hasta que entre alguien). */
+  reset: () => string;
+  /** Olvida el código persistido (empezar limpio). */
+  forget: () => void;
+  /** Restaura el último código guardado, si existe. */
+  restore: () => string | null;
+  capacity: number;
+  isFull: (remoteCount: number) => boolean;
+  freeSlots: (remoteCount: number) => number;
+}
+
+export function createRoomSession(storage: StoragePort, rng: () => number = Math.random): RoomSession {
+  const persist = createRoomCodeStorage(storage);
+  let code: string | null = null;
+  const setCode = (c: string) => { code = c; persist.save(c); return c; };
+  return {
+    getCode: () => code,
+    create: () => setCode(generateRoomCode(rng)),
+    join: (raw) => {
+      const c = normalizeRoomCode(raw);
+      if (!isValidRoomCode(c)) throw new Error(`código inválido: ${raw}`);
+      return setCode(c);
+    },
+    reset: () => setCode(generateRoomCode(rng)),
+    forget: () => { code = null; persist.clear(); },
+    restore: () => { code = persist.load(); return code; },
+    capacity: MAX_PLAYERS,
+    // remoteCount = otros jugadores; +1 = yo
+    isFull: (remoteCount) => remoteCount + 1 >= MAX_PLAYERS,
+    freeSlots: (remoteCount) => Math.max(0, MAX_PLAYERS - (remoteCount + 1)),
+  };
+}
+```
+
+## 📝 Step 4 — Test `app/lib/net/__tests__/roomSession.test.ts`
+
+```ts
+import { describe, it, expect } from "vitest";
+import { createRoomSession, MAX_PLAYERS } from "../roomSession";
+import { generateRoomCode, isValidRoomCode } from "../roomCode";
+import { NoopStorageAdapter } from "../../platform-web";
+
+describe("roomSession", () => {
+  it("generates valid codes without ambiguous chars", () => {
+    const c = generateRoomCode(() => 0);
+    expect(isValidRoomCode(c)).toBe(true);
+    expect(c).not.toMatch(/[0O1I]/);
+  });
+  it("create persists and restore returns it", () => {
+    const s1 = new NoopStorageAdapter();
+    const a = createRoomSession(s1);
+    const code = a.create();
+    const b = createRoomSession(s1);
+    expect(b.restore()).toBe(code);
+  });
+  it("reset produces a fresh code", () => {
+    const s = createRoomSession(new NoopStorageAdapter());
+    const first = s.create();
+    const second = s.reset();
+    expect(second).not.toBe(first); // distinto con altísima probabilidad
+  });
+  it("capacity helpers reflect N/4", () => {
+    const s = createRoomSession(new NoopStorageAdapter());
+    expect(s.freeSlots(0)).toBe(MAX_PLAYERS - 1); // solo yo → 3 libres
+    expect(s.isFull(3)).toBe(true);               // 3 remotos + yo = 4
+  });
+  it("join rejects invalid codes", () => {
+    const s = createRoomSession(new NoopStorageAdapter());
+    expect(() => s.join("xx")).toThrow();
+  });
+});
+```
+
+## ✅ Verificación
+`npm test -w apps/web-demo` (o el runner de tests del app) verde. La capacidad real (5º →
+`room-full`) la aplica el servidor PartyKit (task 08); aquí se valida la lógica de cliente.
 
 ## 📚 References
-- Decisiones de la fase: `docs/phases/phase-14-multiplayer/README.md` §Decisiones tomadas
-- `docs/architecture/09-multiplayer.md` §6 (room/session model) + §4 (autoridad PartyKit)
-- `apps/web-demo/app/lib/platform-web.ts` (patrón de platform adapter para localStorage)
-- task 08 (PartyKit adapter), task 03 (PlayerDescriptor: displayName/characterId)
+- `apps/web-demo/app/lib/platform-web.ts` (`StoragePort`, `localStorageAdapter`, `NoopStorageAdapter`)
+- `docs/architecture/09-multiplayer.md` §7
+- task 08 (PartyKit aplica el cap server-side)

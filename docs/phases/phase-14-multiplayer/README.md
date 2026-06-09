@@ -98,7 +98,12 @@ app/components/RemotePlayerLabel.tsx      NEW  nombre (editable) sobre avatares 
 - [ ] [08-transport-adapters-and-vercel](tasks/08-transport-adapters-and-vercel.md)
 - [ ] [09-optimistic-prediction-reconciliation](tasks/09-optimistic-prediction-reconciliation.md)
 - [ ] [10-room-session-lifecycle](tasks/10-room-session-lifecycle.md)
-- [ ] [11-integration-demo-and-validation](tasks/11-integration-demo-and-validation.md)
+- [ ] [11-demo-multiplayer-route](tasks/11-demo-multiplayer-route.md) — ruta `/multiplayer`
+- [ ] [12-validation-gate](tasks/12-validation-gate.md)
+
+> **Cada task es implementation-grade**: incluye archivos exactos, código copy-paste, firmas de
+> tipos y tests con asserts, pensada para que un modelo sencillo (Sonnet/Haiku) la ejecute aislada
+> sin re-derivar el diseño. Lee el task file completo antes de empezar.
 
 ---
 
@@ -107,15 +112,15 @@ app/components/RemotePlayerLabel.tsx      NEW  nombre (editable) sobre avatares 
 ```
 01 ─► 02 ─► 04 ─► 06 ─► 07 ─────────────────┐
         │     │                              │
-        └► 03 ┘     05 ─► 09                 ▼
-              │                       11 (validación final)
+        └► 03 ┘     05 ─► 09 ───────────────►├─► 11 (/multiplayer) ─► 12 (gate)
+              │                              │
 08 ─► 10 ─────┴──────────────────────────────┘
-(08 paralelo desde 01; 10 = room/lobby)
+(08 paralelo desde 01; 10 = room/lobby; 11 = demo route)
 ```
 
-- **Iteración mínima entregable (MVP)**: 01 → 02 → 03 → 04 → 06 → 07 → 08(PartyKit) → 10 → 11.
-  Da presence + world compartido + rooms por código con un adapter real. Autoridad/conflictos (05)
-  y predicción (09) pueden ir en una segunda iteración.
+- **Iteración mínima entregable (MVP)**: 01 → 02 → 03 → 04 → 06 → 07 → 08(PartyKit) → 10 → 11 → 12.
+  Da **presence en tiempo real** (avatares) + rooms por código en `/multiplayer`. Autoridad/conflictos
+  (05), predicción/rollback (09) e item-sync completo son la **2ª iteración**.
 
 ---
 
@@ -175,3 +180,4 @@ Las open questions iniciales quedaron resueltas por el owner:
 |-------|--------|
 | 2026-06-09 | Phase 14 planning — multiplayer agnóstico (ADR-0008 + arquitectura 09) |
 | 2026-06-09 | Decisiones del owner: PartyKit, rooms por código (efímero+localStorage, solo/reset), cap 4, nombre anónimo cambiable. Nueva task 10 (room lifecycle); integración → 11 |
+| 2026-06-09 | Plan end-to-end implementation-grade: 12 tasks con código copy-paste + tests; ruta `/multiplayer` (task 11) + validation gate (task 12). Listo para ejecutar por Sonnet/Haiku |

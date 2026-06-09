@@ -20,8 +20,9 @@
 - [ ] [05-authority-and-conflict-resolution](tasks/05-authority-and-conflict-resolution.md)
 - [ ] [09-optimistic-prediction-reconciliation](tasks/09-optimistic-prediction-reconciliation.md)
 
-## Week 5 — Integración y validación
-- [ ] [11-integration-demo-and-validation](tasks/11-integration-demo-and-validation.md)
+## Week 5 — Demo /multiplayer + validación
+- [ ] [11-demo-multiplayer-route](tasks/11-demo-multiplayer-route.md) (ruta `/multiplayer`, lobby, RemotePlayers)
+- [ ] [12-validation-gate](tasks/12-validation-gate.md) (tests + build + agnosticismo + escenarios A–E)
 
 ---
 

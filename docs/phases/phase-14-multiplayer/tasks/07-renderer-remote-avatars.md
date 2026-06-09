@@ -6,44 +6,114 @@
 
 ## 🎯 Objetivo
 
-Dibujar en R3F los avatares de los otros jugadores presentes en la **escena actual**, con
-interpolación suave de su posición. Reusa el sprite del personaje actual (un único personaje
-hoy; `characterId` ya reservado para el futuro).
+Dibujar en R3F los avatares de los otros jugadores presentes en la escena actual, con
+interpolación suave. Reusa `DavidSprite` y `GAME_CHARACTER_SPRITES`. Añade un slot en el canvas de
+la demo para montarlos.
+
+---
+
+## 📁 Archivos
+
+- **CREAR** `packages/engine-renderer-r3f/src/net/RemotePlayers.tsx`
+- **EDITAR** `packages/engine-renderer-r3f/src/index.ts` (export `RemotePlayers`)
+- **EDITAR** `apps/web-demo/app/components/GameTouchCanvas.tsx` (prop slot `extraCanvasChildren`)
 
 ---
 
 ## ✅ Success Criteria
 
-- [ ] `engine-renderer-r3f/src/net/RemotePlayers.tsx`: renderiza un avatar por cada jugador de `remotePlayersStore.getInScene(currentSceneId)`
-- [ ] `useRemotePlayerInterpolation`: suaviza posición entre updates de presence (lerp hacia el último target)
-- [ ] El avatar usa el mismo pipeline de sprite/clip que el jugador local; selección por `characterId` (hoy mapea al único personaje)
-- [ ] Aparición/desaparición al entrar/salir de escena u on join/leave
-- [ ] No usa lógica de juego: solo presenta presence (Regla de Oro en el renderer)
-- [ ] Verificación visual con dos pestañas (task 10)
+- [ ] `RemotePlayers` renderiza un sprite por jugador de `store.getInScene(currentSceneId)`
+- [ ] Posición interpolada (lerp en `useFrame`); animación según `action`
+- [ ] `GameTouchCanvas` acepta `extraCanvasChildren?: ReactNode` montado dentro de `<Physics>`
+- [ ] Sin lógica de juego (solo presenta presence)
+- [ ] `npm run build -w packages/engine-renderer-r3f` compila
+- [ ] Verificación visual en task 11 (dos pestañas)
 
 ---
 
-## 📝 Instructions
+## 📝 Step 1 — `engine-renderer-r3f/src/net/RemotePlayers.tsx`
 
-### Step 1: RemotePlayers component
-Suscríbete a `remotePlayersStore` y al `sceneId` actual. Renderiza el sprite por jugador.
-Reusa los clips de animación según `action` (idle/north/south/west/east) ya presentes en el
-renderer (`render/sprite/clips.ts`).
+```tsx
+"use client";
+import { useEffect, useReducer, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
+import { Vector3, type Mesh } from "three";
+import DavidSprite from "../sprite/DavidSprite";
+import { GAME_CHARACTER_SPRITES } from "../sprite/clips";
+import type { PlayerDescriptor, RemotePlayersStore } from "@pointclick-engine/engine-core";
 
-### Step 2: Interpolación
-La presence llega throttled (~10–15Hz); interpola en `useFrame` hacia el último target para que
-el movimiento se vea fluido a 60fps. Nada de pathfinding para remotos: solo seguir su posición.
+/** Suscribe a la store (re-render en cada cambio). */
+function useRemotePlayers(store: RemotePlayersStore): PlayerDescriptor[] {
+  const [, force] = useReducer((x) => x + 1, 0);
+  useEffect(() => store.subscribe(() => force()), [store]);
+  return store.getAll();
+}
 
-### Step 3: character mapping
-`characterId → sprite`. Hoy hay uno solo: un mapa con un único entry + default. Deja el hook
-listo para añadir personajes sin tocar el resto.
+function RemotePlayerSprite({ player }: { player: PlayerDescriptor }) {
+  const meshRef = useRef<Mesh>(null);
+  const target = useRef(new Vector3(player.position[0], player.position[1], player.position[2]));
+  const initialized = useRef(false);
 
-### Step 4: Testing/validation
-Build del renderer OK; verificación visual en task 10 (dos pestañas, ver avatar del otro moverse).
+  // Actualiza el objetivo cada render (presence llega throttled ~12Hz).
+  target.current.set(player.position[0], player.position[1], player.position[2]);
 
----
+  const sprites = GAME_CHARACTER_SPRITES[player.characterId] ?? GAME_CHARACTER_SPRITES.Dave;
+  const animation = sprites[player.action] ?? sprites.idle;
+
+  useFrame((_, dt) => {
+    const m = meshRef.current;
+    if (!m) return;
+    if (!initialized.current) { m.position.copy(target.current); initialized.current = true; return; }
+    m.position.lerp(target.current, Math.min(1, dt * 10)); // suavizado a 60fps
+  });
+
+  return <DavidSprite animation={animation} meshRef={meshRef} isPaused={player.action === "idle"} />;
+}
+
+export interface RemotePlayersProps {
+  store: RemotePlayersStore;
+  currentSceneId: string;
+}
+
+/** Dibuja los avatares de los demás jugadores en la escena actual. */
+export function RemotePlayers({ store, currentSceneId }: RemotePlayersProps) {
+  const players = useRemotePlayers(store);
+  const inScene = players.filter((p) => p.sceneId === currentSceneId);
+  return (
+    <>
+      {inScene.map((p) => <RemotePlayerSprite key={p.playerId} player={p} />)}
+    </>
+  );
+}
+```
+
+## 📝 Step 2 — export en `engine-renderer-r3f/src/index.ts`
+```ts
+// Net
+export { RemotePlayers, type RemotePlayersProps } from "./net/RemotePlayers";
+```
+
+## 📝 Step 3 — Slot en `GameTouchCanvas.tsx`
+
+1. Añade a `GameTouchCanvasProps`:
+```ts
+  /** Contenido extra dentro del mundo físico (p.ej. <RemotePlayers/> en /multiplayer). */
+  extraCanvasChildren?: React.ReactNode;
+```
+2. Desestructura `extraCanvasChildren` en los props del componente.
+3. Móntalo dentro de `<Physics>`, junto a `<SceneTransitions/>`:
+```tsx
+        <SceneTransitions debug={runtimeDebug} onTransitionTriggered={handleTransitionTriggered} />
+        {extraCanvasChildren}
+      </Physics>
+```
+
+> Cambio aditivo y backward-compatible: sin la prop, el comportamiento single-player es idéntico.
+
+## ✅ Verificación
+`npm run build -w packages/engine-renderer-r3f` compila. Validación visual en task 11.
 
 ## 📚 References
-- `apps/web-demo/app/lib/engine/render/sprite/clips.ts`, `speakingAnimation.ts`
-- `packages/engine-renderer-r3f` (componentes de escena existentes)
-- `docs/architecture/06-renderer-implementation-guide.md`
+- `packages/engine-renderer-r3f/src/sprite/DavidSprite.tsx` (`meshRef`, `animation`, `isPaused`)
+- `packages/engine-renderer-r3f/src/sprite/clips.ts` (`GAME_CHARACTER_SPRITES`, direcciones)
+- `apps/web-demo/app/components/GameTouchCanvas.tsx` (`<Physics>` envuelve el mundo)
