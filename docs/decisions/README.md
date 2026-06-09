@@ -41,6 +41,7 @@ Cada ADR es **~30 líneas**. Estructura:
 - [0005 — Renderer ports design (GameLoopPort, InputPort, ViewportPort)](0005-renderer-ports-design.md)
 - [0006 — Command/Event architecture (bidirectional web ↔ game)](0006-command-event-architecture.md)
 - [0007 — Release strategy (npm scope, versioning, publish process)](0007-release-strategy.md)
+- [0008 — Multiplayer architecture (agnostic transport + state partition)](0008-multiplayer-architecture.md)
 
 ## Cómo añadir un ADR
 
