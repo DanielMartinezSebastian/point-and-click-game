@@ -28,6 +28,16 @@ function RemotePlayerSprite({ player }: { player: PlayerDescriptor }) {
   const bodyRef = useRef<RapierRigidBody>(null);
   const meshRef = useRef<Mesh>(null);
 
+  // Frozen at mount — only used as RigidBody's initial position prop.
+  // All subsequent movement goes through setNextKinematicTranslation in
+  // useFrame so that smooth interpolation is never overridden by a prop
+  // update (which would teleport the body to the raw network position).
+  const spawnPosition = useRef<[number, number, number]>([
+    player.position[0],
+    player.position[1],
+    player.position[2],
+  ]);
+
   // target = posición de física recibida por red (~12 Hz)
   const target = useRef(
     new Vector3(player.position[0], player.position[1], player.position[2]),
@@ -60,7 +70,7 @@ function RemotePlayerSprite({ player }: { player: PlayerDescriptor }) {
 
     // Escala por profundidad (igual que GameTouchSpriteRuntime).
     const depthFactor = MathUtils.clamp(
-      (target.current.z - DEPTH_FAR_Z) / (DEPTH_NEAR_Z - DEPTH_FAR_Z),
+      (smoothPos.current.z - DEPTH_FAR_Z) / (DEPTH_NEAR_Z - DEPTH_FAR_Z),
       0,
       1,
     );
@@ -78,7 +88,7 @@ function RemotePlayerSprite({ player }: { player: PlayerDescriptor }) {
       ref={bodyRef}
       type="kinematicPosition"
       colliders={false}
-      position={[player.position[0], player.position[1], player.position[2]]}
+      position={spawnPosition.current}
       enabledRotations={[false, false, false]}
     >
       <CuboidCollider args={[0.55, 0.95, 0.18]} friction={0.05} restitution={0} />
