@@ -28,16 +28,25 @@ function RemotePlayerSprite({ player }) {
         const m = meshRef.current;
         if (!m)
             return;
+        // Escala por profundidad desde la posición OBJETIVO (igual que GameTouchSpriteRuntime).
+        const depthFactor = MathUtils.clamp((target.current.z - DEPTH_FAR_Z) / (DEPTH_NEAR_Z - DEPTH_FAR_Z), 0, 1);
+        const s = MathUtils.lerp(SPRITE_MIN_SCALE, SPRITE_MAX_SCALE, depthFactor);
+        // El sprite local vive dentro de <RigidBody> con offset Y = (spriteScale - 0.95)
+        // (ver GameTouchSpriteRuntime línea ~775: meshRef.current.position.y = spriteScale - 0.95).
+        // Replicamos ese offset para que el avatar remoto coincida visualmente con el local.
+        const tx = target.current.x;
+        const ty = target.current.y + s - 0.95;
+        const tz = target.current.z;
         if (!initialized.current) {
-            m.position.copy(target.current);
+            m.position.set(tx, ty, tz);
             initialized.current = true;
         }
         else {
-            m.position.lerp(target.current, Math.min(1, dt * 10));
+            const t = Math.min(1, dt * 10);
+            m.position.x += (tx - m.position.x) * t;
+            m.position.y += (ty - m.position.y) * t;
+            m.position.z += (tz - m.position.z) * t;
         }
-        // Escala por profundidad: igual que el player local en GameTouchSpriteRuntime.
-        const depthFactor = MathUtils.clamp((m.position.z - DEPTH_FAR_Z) / (DEPTH_NEAR_Z - DEPTH_FAR_Z), 0, 1);
-        const s = MathUtils.lerp(SPRITE_MIN_SCALE, SPRITE_MAX_SCALE, depthFactor);
         const flipX = animation.flipX ? -1 : 1;
         m.scale.set(flipX * s, s, 1);
     });
