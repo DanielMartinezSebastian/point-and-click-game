@@ -15,7 +15,12 @@ export function createPartyKitAdapter(host: string): MultiplayerPort {
   return {
     connect(opts: ConnectOptions) {
       statusHandlers.forEach((h) => h({ state: "connecting" }));
-      socket = new PartySocket({ host, party: "multiplayer", room: opts.room });
+      // Pass our stable UUID as the PartyKit party-key so conn.id on the
+      // server equals selfId. Without this, PartySocket generates its own ID,
+      // the server echoes it back as status.selfId, MultiplayerSession updates
+      // self.playerId to the new ID, and subsequent presences look like a
+      // second player to peers who already stored the initial UUID-based entry.
+      socket = new PartySocket({ host, party: "multiplayer", room: opts.room, id: opts.selfId });
       socket.addEventListener("message", (e: MessageEvent) => {
         let env: { kind?: string; payload?: unknown };
         try {
