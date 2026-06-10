@@ -2,9 +2,14 @@
 import { jsx as _jsx, Fragment as _Fragment } from "react/jsx-runtime";
 import { useEffect, useReducer, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Vector3 } from "three";
+import { MathUtils, Vector3 } from "three";
 import DavidSprite from "../sprite/DavidSprite";
 import { GAME_CHARACTER_SPRITES } from "../sprite/clips";
+// Mismos valores que GameTouchSpriteRuntime para que la escala por profundidad sea idéntica.
+const DEPTH_FAR_Z = -16;
+const DEPTH_NEAR_Z = 8;
+const SPRITE_MIN_SCALE = 1.4;
+const SPRITE_MAX_SCALE = 2.94;
 /** Suscribe a la store (re-render en cada cambio). */
 function useRemotePlayers(store) {
     const [, force] = useReducer((x) => x + 1, 0);
@@ -26,9 +31,15 @@ function RemotePlayerSprite({ player }) {
         if (!initialized.current) {
             m.position.copy(target.current);
             initialized.current = true;
-            return;
         }
-        m.position.lerp(target.current, Math.min(1, dt * 10)); // suavizado a 60fps
+        else {
+            m.position.lerp(target.current, Math.min(1, dt * 10));
+        }
+        // Escala por profundidad: igual que el player local en GameTouchSpriteRuntime.
+        const depthFactor = MathUtils.clamp((m.position.z - DEPTH_FAR_Z) / (DEPTH_NEAR_Z - DEPTH_FAR_Z), 0, 1);
+        const s = MathUtils.lerp(SPRITE_MIN_SCALE, SPRITE_MAX_SCALE, depthFactor);
+        const flipX = animation.flipX ? -1 : 1;
+        m.scale.set(flipX * s, s, 1);
     });
     return (_jsx(DavidSprite, { animation: animation, meshRef: meshRef, isPaused: player.action === "idle" }));
 }
