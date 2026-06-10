@@ -299,6 +299,8 @@ export type RuntimeDropEvent = {
     | "item-interact";
   itemId: string;
   interactionId?: string;
+  /** Full placed-item data; set for outcome "place" so the event bus carries enough info for remote clients. */
+  placedItem?: PlacedSceneItem;
 };
 
 export type RuntimeDialogEvent = {

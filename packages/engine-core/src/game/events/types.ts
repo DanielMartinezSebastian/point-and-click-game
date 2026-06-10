@@ -1,4 +1,6 @@
-import type { AudioSettings, GameScene, GameVec3, Locale, SoundCategory } from "../types";
+import type { AudioSettings, GameScene, GameVec3, Locale, PlacedSceneItem, SoundCategory } from "../types";
+import type { PlayerDescriptor } from "../net/playerIdentity";
+import type { ConnectionStatus, PlayerId } from "../../ports/multiplayer";
 
 /**
  * Union exhaustiva de todos los eventos que el motor puede emitir.
@@ -20,8 +22,10 @@ export type GameEvent =
   | {
       type: "item:dropped";
       itemId: string;
-      outcome: "consume" | "place" | "return";
+      outcome: "consume" | "place" | "return" | "pickup-success";
       interactionId?: string;
+      /** Full placed-item data; present only for outcome "place" — used by peers to add the item to their scene. */
+      placedItem?: PlacedSceneItem;
     }
   // Dialog
   | { type: "dialog:triggered"; text: string; dialogKey?: string; source: string }
@@ -45,7 +49,11 @@ export type GameEvent =
   | { type: "audio:settingsChanged"; settings: AudioSettings }
   // i18n
   | { type: "i18n:localeChanged"; locale: Locale; previous: Locale }
-  | { type: "i18n:dictionaryUpdated"; locale: Locale; keysAdded: number };
+  | { type: "i18n:dictionaryUpdated"; locale: Locale; keysAdded: number }
+  // Net (locales para UI; nunca se replican — ver eventClassification)
+  | { type: "net:playerJoined"; player: PlayerDescriptor }
+  | { type: "net:playerLeft"; playerId: PlayerId }
+  | { type: "net:status"; status: ConnectionStatus };
 
 export type GameEventType = GameEvent["type"];
 

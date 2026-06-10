@@ -19,6 +19,8 @@ export { SceneTransitions } from "./scene/SceneTransitions";
 // Runtime
 export { GameTouchSpriteRuntime } from "./GameTouchSpriteRuntime";
 export { default as SpeechBubble } from "./SpeechBubble";
+// Net
+export { RemotePlayers } from "./net/RemotePlayers";
 // Hooks
 export { usePlayerWalkAnimation } from "./hooks/usePlayerWalkAnimation";
 export { useAudioSystem } from "./hooks/useAudioSystem";

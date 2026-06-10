@@ -228,6 +228,8 @@ export type RuntimeDropEvent = {
     outcome: "place" | "consume" | "return" | "rule-miss" | "unknown-item" | "on-player" | "pickup-blocked" | "pickup-success" | "item-interact";
     itemId: string;
     interactionId?: string;
+    /** Full placed-item data; set for outcome "place" so the event bus carries enough info for remote clients. */
+    placedItem?: PlacedSceneItem;
 };
 export type RuntimeDialogEvent = {
     type: "onDialog";

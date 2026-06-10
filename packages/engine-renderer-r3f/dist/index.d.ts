@@ -18,6 +18,7 @@ export { SceneWallPointPreview } from "./scene/SceneWallPointPreview";
 export { SceneTransitions } from "./scene/SceneTransitions";
 export { GameTouchSpriteRuntime } from "./GameTouchSpriteRuntime";
 export { default as SpeechBubble } from "./SpeechBubble";
+export { RemotePlayers, type RemotePlayersProps } from "./net/RemotePlayers";
 export { usePlayerWalkAnimation } from "./hooks/usePlayerWalkAnimation";
 export { useAudioSystem } from "./hooks/useAudioSystem";
 export { useClickToMoveController } from "./hooks/useClickToMoveController";

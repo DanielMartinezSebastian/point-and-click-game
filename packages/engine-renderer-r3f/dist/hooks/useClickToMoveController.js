@@ -1,6 +1,11 @@
 "use client";
 import { useCallback, useRef } from "react";
 import { MathUtils } from "three";
+// After this many ms of barely moving, start nudging perpendicular to the
+// desired direction so the character slides around the obstacle instead of
+// pressing into it. At SLIDE_SWITCH_MS the nudge flips to the opposite side.
+const SLIDE_TRIGGER_MS = 150;
+const SLIDE_SWITCH_MS = 350;
 const DEFAULT_CONFIG = {
     arrivalThreshold: 0.15,
     stuckMovementEpsilon: 0.015,
@@ -57,6 +62,20 @@ export function useClickToMoveController(config = {}) {
             }
             return { horizontal: 0, vertical: 0 };
         }
+        // Slide assist: when the character has been making slow progress for long
+        // enough, blend in a perpendicular nudge so it slides around the surface
+        // of the obstacle instead of pressing into it and freezing.
+        const prog = progressRef.current;
+        if (prog && prog.stuckMs >= SLIDE_TRIGGER_MS) {
+            const sign = prog.slideSign;
+            const perpX = (-dz / dist) * sign;
+            const perpZ = (dx / dist) * sign;
+            const t = MathUtils.clamp((prog.stuckMs - SLIDE_TRIGGER_MS) / 200, 0, 0.85);
+            return {
+                horizontal: MathUtils.clamp(dx / dist * (1 - t) + perpX * t, -1, 1),
+                vertical: MathUtils.clamp(dz / dist * (1 - t) + perpZ * t, -1, 1),
+            };
+        }
         return {
             horizontal: MathUtils.clamp(dx / dist, -1, 1),
             vertical: MathUtils.clamp(dz / dist, -1, 1),
@@ -69,12 +88,18 @@ export function useClickToMoveController(config = {}) {
         }
         const prev = progressRef.current;
         if (!prev) {
-            progressRef.current = { x: currentX, z: currentZ, stuckMs: 0 };
+            progressRef.current = { x: currentX, z: currentZ, stuckMs: 0, slideSign: 1 };
             return { stuck: false };
         }
         const moved = Math.sqrt((currentX - prev.x) ** 2 + (currentZ - prev.z) ** 2);
         if (moved < mergedConfig.stuckMovementEpsilon) {
             prev.stuckMs += delta * 1000;
+            // Flip the perpendicular slide direction halfway through the timeout so
+            // the character tries the other side of the obstacle if the first side
+            // didn't work.
+            if (prev.stuckMs >= SLIDE_SWITCH_MS && prev.stuckMs - delta * 1000 < SLIDE_SWITCH_MS) {
+                prev.slideSign = prev.slideSign === 1 ? -1 : 1;
+            }
             if (prev.stuckMs > mergedConfig.stuckTimeoutMs) {
                 progressRef.current = null;
                 cancelTarget();
@@ -85,6 +110,7 @@ export function useClickToMoveController(config = {}) {
             prev.x = currentX;
             prev.z = currentZ;
             prev.stuckMs = 0;
+            prev.slideSign = 1;
         }
         return { stuck: false };
     }, [cancelTarget, mergedConfig.stuckMovementEpsilon, mergedConfig.stuckTimeoutMs]);

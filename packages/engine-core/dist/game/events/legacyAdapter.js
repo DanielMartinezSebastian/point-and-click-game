@@ -19,6 +19,7 @@ export function legacyRuntimeEventToGameEvent(ev) {
                 itemId: ev.itemId,
                 outcome: ev.outcome,
                 interactionId: ev.interactionId,
+                ...(ev.placedItem ? { placedItem: ev.placedItem } : {}),
             };
         case "onDialog":
             return {
