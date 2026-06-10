@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useReducer, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
+import { RigidBody, CuboidCollider } from "@react-three/rapier";
+import type { RapierRigidBody } from "@react-three/rapier";
 import { MathUtils, Vector3, type Mesh } from "three";
 import DavidSprite from "../sprite/DavidSprite";
 import { GAME_CHARACTER_SPRITES } from "../sprite/clips";
@@ -23,13 +25,19 @@ function useRemotePlayers(store: RemotePlayersStore): PlayerDescriptor[] {
 }
 
 function RemotePlayerSprite({ player }: { player: PlayerDescriptor }) {
+  const bodyRef = useRef<RapierRigidBody>(null);
   const meshRef = useRef<Mesh>(null);
+
+  // target = posición de física recibida por red (~12 Hz)
   const target = useRef(
     new Vector3(player.position[0], player.position[1], player.position[2]),
   );
-  const initialized = useRef(false);
+  // smoothPos = posición interpolada que se aplica al body kinematic cada frame
+  const smoothPos = useRef(
+    new Vector3(player.position[0], player.position[1], player.position[2]),
+  );
 
-  // Actualiza el objetivo cada render (presence llega throttled ~12Hz).
+  // Actualiza el objetivo cada render (presence llega throttled ~12 Hz).
   target.current.set(player.position[0], player.position[1], player.position[2]);
 
   const sprites =
@@ -37,10 +45,20 @@ function RemotePlayerSprite({ player }: { player: PlayerDescriptor }) {
   const animation = sprites[player.action] ?? sprites.idle;
 
   useFrame((_, dt) => {
+    const body = bodyRef.current;
     const m = meshRef.current;
-    if (!m) return;
+    if (!body || !m) return;
 
-    // Escala por profundidad desde la posición OBJETIVO (igual que GameTouchSpriteRuntime).
+    // Lerp suave hacia la posición objetivo.
+    const t = Math.min(1, dt * 10);
+    smoothPos.current.x += (target.current.x - smoothPos.current.x) * t;
+    smoothPos.current.y += (target.current.y - smoothPos.current.y) * t;
+    smoothPos.current.z += (target.current.z - smoothPos.current.z) * t;
+
+    // Mueve el cuerpo kinematic — Rapier propaga la colisión con el player local.
+    body.setNextKinematicTranslation(smoothPos.current);
+
+    // Escala por profundidad (igual que GameTouchSpriteRuntime).
     const depthFactor = MathUtils.clamp(
       (target.current.z - DEPTH_FAR_Z) / (DEPTH_NEAR_Z - DEPTH_FAR_Z),
       0,
@@ -48,33 +66,28 @@ function RemotePlayerSprite({ player }: { player: PlayerDescriptor }) {
     );
     const s = MathUtils.lerp(SPRITE_MIN_SCALE, SPRITE_MAX_SCALE, depthFactor);
 
-    // El sprite local vive dentro de <RigidBody> con offset Y = (spriteScale - 0.95)
-    // (ver GameTouchSpriteRuntime línea ~775: meshRef.current.position.y = spriteScale - 0.95).
-    // Replicamos ese offset para que el avatar remoto coincida visualmente con el local.
-    const tx = target.current.x;
-    const ty = target.current.y + s - 0.95;
-    const tz = target.current.z;
-
-    if (!initialized.current) {
-      m.position.set(tx, ty, tz);
-      initialized.current = true;
-    } else {
-      const t = Math.min(1, dt * 10);
-      m.position.x += (tx - m.position.x) * t;
-      m.position.y += (ty - m.position.y) * t;
-      m.position.z += (tz - m.position.z) * t;
-    }
+    // Offset Y del sprite dentro del RigidBody: mismo que el player local.
+    m.position.y = s - 0.95;
 
     const flipX = animation.flipX ? -1 : 1;
     m.scale.set(flipX * s, s, 1);
   });
 
   return (
-    <DavidSprite
-      animation={animation}
-      meshRef={meshRef}
-      isPaused={player.action === "idle"}
-    />
+    <RigidBody
+      ref={bodyRef}
+      type="kinematicPosition"
+      colliders={false}
+      position={[player.position[0], player.position[1], player.position[2]]}
+      enabledRotations={[false, false, false]}
+    >
+      <CuboidCollider args={[0.55, 0.95, 0.18]} friction={0.05} restitution={0} />
+      <DavidSprite
+        animation={animation}
+        meshRef={meshRef}
+        isPaused={player.action === "idle"}
+      />
+    </RigidBody>
   );
 }
 
