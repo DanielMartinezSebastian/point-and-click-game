@@ -52,8 +52,10 @@ export function createMultiplayerRuntime(opts: {
     presenceThrottleMs: 80,
   });
 
-  // Limpia jugadores desconectados cada 5s.
-  const prune = setInterval(() => remotePlayers.pruneStale(8000), 5000);
+  // Limpia jugadores que no manden heartbeat en 10 min (o que cerraron la ventana,
+  // que el servidor ya elimina vía __left inmediatamente).
+  const STALE_MS = 10 * 60 * 1000;
+  const prune = setInterval(() => remotePlayers.pruneStale(STALE_MS), 60_000);
 
   return {
     remotePlayers,

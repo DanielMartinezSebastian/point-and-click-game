@@ -25,6 +25,8 @@ export interface MultiplayerSessionOptions {
     clock?: ThrottleClock;
     /** Reconciliador optimista (task 09) para claim-result/snapshot. */
     reconciler?: OptimisticReconciler;
+    /** ms entre heartbeats para jugadores inactivos. Default 30 000 (30 s). 0 = sin heartbeat. */
+    heartbeatMs?: number;
 }
 export interface MultiplayerSession {
     dispose: () => void;

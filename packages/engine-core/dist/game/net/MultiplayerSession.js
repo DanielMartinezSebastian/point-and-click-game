@@ -101,8 +101,14 @@ export function createMultiplayerSession(opts) {
     });
     port.connect({ room, selfId: self.playerId });
     rawSendPresence(); // anúnciate al entrar (inmediato, sin throttle)
+    // Heartbeat: mantiene la presence viva aunque el jugador esté inactivo.
+    // El receptor solo descartará al jugador si supera el stale threshold (p.ej. 10 min).
+    const heartbeatMs = opts.heartbeatMs ?? 30000;
+    const heartbeatTimer = heartbeatMs > 0 ? setInterval(rawSendPresence, heartbeatMs) : null;
     return {
         dispose: () => {
+            if (heartbeatTimer !== null)
+                clearInterval(heartbeatTimer);
             unsubs.forEach((u) => u());
             offMsg();
             offStatus();
