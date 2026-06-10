@@ -646,6 +646,13 @@ export function GameTouchSpriteRuntime({
     horizontal = applyDeadzone(horizontal, MOVEMENT_INPUT_DEADZONE);
     vertical = applyDeadzone(vertical, MOVEMENT_INPUT_DEADZONE);
 
+    // Snapshot the intended direction BEFORE slide-zeroing so the animation
+    // keeps showing the walk direction even when a kinematic body (e.g. a
+    // remote player) is blocking the axis.  Without this, slideBlockX zeroes
+    // `horizontal` → resolveAction(0,0) = "idle" every other frame → flicker.
+    const rawHorizontal = horizontal;
+    const rawVertical = vertical;
+
     // Apply wall-slide: if a collider blocked an axis last frame, do not push
     // into it again this frame.  The perpendicular axis is kept intact so the
     // character slides along the surface.  Only suppress when *trying* to move
@@ -662,7 +669,8 @@ export function GameTouchSpriteRuntime({
       const dz = targetPos[1] - currentPos[1];
       nextAction = resolveAction(dx, dz);
     } else {
-      nextAction = resolveAction(horizontal, vertical);
+      // Use pre-zeroed direction so a blocked axis doesn't collapse to idle.
+      nextAction = resolveAction(rawHorizontal, rawVertical);
     }
 
     if (currentActionRef.current !== nextAction) {
