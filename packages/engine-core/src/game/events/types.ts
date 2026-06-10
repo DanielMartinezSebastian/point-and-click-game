@@ -1,4 +1,4 @@
-import type { AudioSettings, GameScene, GameVec3, Locale, SoundCategory } from "../types";
+import type { AudioSettings, GameScene, GameVec3, Locale, PlacedSceneItem, SoundCategory } from "../types";
 import type { PlayerDescriptor } from "../net/playerIdentity";
 import type { ConnectionStatus, PlayerId } from "../../ports/multiplayer";
 
@@ -22,8 +22,10 @@ export type GameEvent =
   | {
       type: "item:dropped";
       itemId: string;
-      outcome: "consume" | "place" | "return";
+      outcome: "consume" | "place" | "return" | "pickup-success";
       interactionId?: string;
+      /** Full placed-item data; present only for outcome "place" — used by peers to add the item to their scene. */
+      placedItem?: PlacedSceneItem;
     }
   // Dialog
   | { type: "dialog:triggered"; text: string; dialogKey?: string; source: string }

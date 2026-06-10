@@ -5,8 +5,10 @@ import {
   createSelfDescriptor,
   getSceneState,
   type GameEvent,
+  type PlacedSceneItem,
   type RemotePlayersStore,
 } from "@pointclick-engine/engine-core";
+import { usePlacedItemsStore } from "../../store/placedItemsStore";
 import { createPartyKitAdapter } from "./partyKitAdapter";
 
 export interface MultiplayerRuntime {
@@ -45,10 +47,30 @@ export function createMultiplayerRuntime(opts: {
       displayName: opts.displayName,
     }),
     remotePlayers,
-    // Re-emite el evento world remoto al bus local. La sesión activa `applyingRemote`
-    // mientras corre esto, así que NO se vuelve a difundir (anti-bucle). Los suscriptores
-    // del demo (audio, door… vía runtime.on) reaccionan al evento compartido.
-    applyRemoteEvent: (event: GameEvent) => runtime.emit(event),
+    // Apply remote world events: update shared stores THEN emit to the bus
+    // (audio, door logic, etc.). applyingRemote is already true here so the
+    // session won't re-broadcast what we emit (anti-loop guard).
+    applyRemoteEvent: (event: GameEvent) => {
+      if (event.type === "item:dropped") {
+        const store = usePlacedItemsStore.getState();
+        if (event.outcome === "place" && event.placedItem) {
+          store.addItem(event.placedItem);
+        } else if (event.outcome === "pickup-success" && event.interactionId) {
+          store.removeItemByInteractionId(event.interactionId);
+        }
+      }
+      runtime.emit(event);
+    },
+    applySnapshot: (world: Record<string, unknown>) => {
+      const store = usePlacedItemsStore.getState();
+      for (const [key, raw] of Object.entries(world)) {
+        if (!key.startsWith("item:") || !key.endsWith(":placed")) continue;
+        const entry = raw as { value: boolean; placedItem?: PlacedSceneItem };
+        if (entry.value && entry.placedItem) {
+          store.addItem(entry.placedItem);
+        }
+      }
+    },
     presenceThrottleMs: 80,
   });
 

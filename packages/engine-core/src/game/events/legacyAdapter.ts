@@ -20,8 +20,9 @@ export function legacyRuntimeEventToGameEvent(ev: RuntimeEvent): GameEvent {
       return {
         type: "item:dropped",
         itemId: ev.itemId,
-        outcome: ev.outcome as "consume" | "place" | "return",
+        outcome: ev.outcome as "consume" | "place" | "return" | "pickup-success",
         interactionId: ev.interactionId,
+        ...(ev.placedItem ? { placedItem: ev.placedItem } : {}),
       };
     case "onDialog":
       return {

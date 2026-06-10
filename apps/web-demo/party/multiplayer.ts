@@ -70,13 +70,28 @@ export default class MultiplayerServer implements Party.Server {
     );
   }
 
-  /** Aplica un evento world al snapshot (item placed/removed). Simplificado. */
+  /** Aplica un evento world al snapshot (item placed/removed). */
   private applyWorldEvent(payload: unknown) {
-    const e = payload as { type?: string; itemId?: string; outcome?: string };
+    const e = payload as {
+      type?: string;
+      itemId?: string;
+      outcome?: string;
+      interactionId?: string;
+      placedItem?: unknown;
+    };
     if (e?.type === "item:dropped" && e.itemId) {
       const key = `item:${e.itemId}:placed`;
-      this.world[key] = { value: e.outcome === "place", ts: Date.now(), by: "server" };
+      if (e.outcome === "place") {
+        // Store full item data so late joiners can reconstruct the scene.
+        this.world[key] = {
+          value: true,
+          placedItem: e.placedItem,
+          ts: Date.now(),
+          by: "server",
+        };
+      } else {
+        this.world[key] = { value: false, ts: Date.now(), by: "server" };
+      }
     }
-    // Extiende para puertas/interaction-state según las escenas de la demo.
   }
 }

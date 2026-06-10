@@ -29,6 +29,8 @@ export interface MultiplayerSessionOptions {
   clock?: ThrottleClock;
   /** Reconciliador optimista (task 09) para claim-result/snapshot. */
   reconciler?: OptimisticReconciler;
+  /** Called once on join with the server's world snapshot so late joiners can hydrate shared state. */
+  applySnapshot?: (world: Record<string, unknown>) => void;
   /** ms entre heartbeats para jugadores inactivos. Default 30 000 (30 s). 0 = sin heartbeat. */
   heartbeatMs?: number;
 }
@@ -128,6 +130,7 @@ export function createMultiplayerSession(
       else opts.reconciler?.reject(r.entityId);
     } else if (m.kind === "snapshot") {
       opts.reconciler?.onSnapshot();
+      opts.applySnapshot?.(m.payload as Record<string, unknown>);
     }
   });
 

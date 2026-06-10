@@ -91,6 +91,7 @@ export function createMultiplayerSession(opts) {
         }
         else if (m.kind === "snapshot") {
             opts.reconciler?.onSnapshot();
+            opts.applySnapshot?.(m.payload);
         }
     });
     const offStatus = port.onStatus((status) => {
